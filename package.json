@@ -12,7 +12,7 @@
     "test": "vitest run tests",
     "test:e2e": "playwright test",
     "check": "npm run lint && npm test && npm run build",
-    "smoke:api": "node scripts/marvel-smoke.mjs"
+    "smoke:api": "node scripts/marvel-smoke.js"
   },
   "dependencies": {
     "react": "19.3.0",
