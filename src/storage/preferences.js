@@ -33,6 +33,28 @@ const normalizeIssueArray = (value, limit) => {
   return result;
 };
 
+const normalizeRecentArray = (value) => {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set();
+  const result = [];
+
+  for (const raw of value) {
+    const issue = normalizeSnapshot(raw?.issue ?? raw);
+    if (!issue || seen.has(issue.id)) continue;
+
+    seen.add(issue.id);
+    result.push({
+      issue,
+      viewedAt: Number.isFinite(raw?.viewedAt) ? raw.viewedAt : null,
+    });
+
+    if (result.length >= RECENT_LIMIT) break;
+  }
+
+  return result;
+};
+
 const normalizeReadingList = (value) => {
   if (!Array.isArray(value)) return [];
 
@@ -57,7 +79,7 @@ export const parsePreferences = (value) => {
 
   return {
     saved: normalizeIssueArray(value.saved, SAVED_LIMIT),
-    recent: normalizeIssueArray(value.recent, RECENT_LIMIT),
+    recent: normalizeRecentArray(value.recent),
     readingList: normalizeReadingList(value.readingList),
   };
 };
@@ -95,16 +117,18 @@ export const toggleSaved = (preferences, issue) => {
   };
 };
 
-export const rememberIssue = (preferences, issue) => {
+export const rememberIssue = (preferences, issue, viewedAt = Date.now()) => {
   const snapshot = toIssueSnapshot(issue);
-
-  if (preferences.recent[0]?.id === snapshot.id) return preferences;
+  const next = {
+    issue: snapshot,
+    viewedAt,
+  };
 
   return {
     ...preferences,
     recent: [
-      snapshot,
-      ...preferences.recent.filter((item) => item.id !== snapshot.id),
+      next,
+      ...preferences.recent.filter((entry) => entry.issue.id !== snapshot.id),
     ].slice(0, RECENT_LIMIT),
   };
 };

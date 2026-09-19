@@ -1,20 +1,130 @@
 @layer components {
-  .image-fallback { display:grid; width:100%; height:100%; place-items:center; background:linear-gradient(135deg,rgb(240 20 30 / .22),transparent),#14171e; color:rgb(255 255 255 / .26); font-size:2rem; font-weight:950; }
-  .status-card { display:grid; justify-items:start; gap:12px; border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface); padding:28px; }
-  .status-card__code { color:#ff747b; font-size:.7rem; font-weight:900; letter-spacing:.12em; }
-  .status-card p { max-width:58ch; color:var(--muted); line-height:1.55; }
-  .load-more { min-height:98px; display:grid; place-items:center; gap:10px; }
-  .load-more__error { color:#ff9298; font-size:.78rem; }
-  .load-more__end { color:var(--muted); font-size:.76rem; }
-  .issue-card--skeleton,.detail-card--skeleton { pointer-events:none; }
-  .issue-card--skeleton { min-height:250px; padding-bottom:18px; }
-  .skeleton-box { border-radius:8px; background:linear-gradient(100deg,rgb(255 255 255 / .035) 10%,rgb(255 255 255 / .085) 28%,rgb(255 255 255 / .035) 46%); background-size:220% 100%; animation:shimmer 1.4s linear infinite; }
-  .issue-skeleton__signal { height:92px; border-radius:0; }
-  .skeleton-box--title { width:62%; height:16px; margin:18px 16px 0; }
-  .skeleton-box--meta { width:44%; height:10px; margin:10px 16px 0; }
-  .detail-card--skeleton { min-height:600px; padding:18px; }
-  .detail-skeleton__hero { height:300px; margin-bottom:18px; }
-  .detail-skeleton__line { width:100%; height:12px; margin-top:10px; }
-  .site-footer { min-height:120px; display:flex; align-items:center; border-top:1px solid var(--line); color:var(--muted); font-size:.74rem; line-height:1.5; }
-  @keyframes shimmer { to { background-position-x:-220%; } }
+  .image-fallback {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    background:
+      linear-gradient(135deg, rgb(219 16 27 / 0.18), transparent),
+      #14171e;
+    color: rgb(255 255 255 / 0.25);
+    font-size: 2rem;
+    font-weight: 950;
+  }
+
+  .status-card {
+    display: grid;
+    justify-items: start;
+    gap: 11px;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background:
+      linear-gradient(135deg, rgb(255 255 255 / 0.025), transparent),
+      var(--surface);
+    padding: 28px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .status-card__code {
+    color: #ff8c92;
+    font-size: 0.64rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
+  .status-card p {
+    max-width: 58ch;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+
+  .load-more {
+    min-height: 90px;
+    display: grid;
+    place-items: center;
+    gap: 9px;
+  }
+
+  .load-more__error {
+    color: #ff9298;
+    font-size: 0.74rem;
+  }
+
+  .load-more__end {
+    color: var(--faint);
+    font-size: 0.68rem;
+  }
+
+  .issue-card--skeleton,
+  .detail-card--skeleton {
+    pointer-events: none;
+  }
+
+  .issue-card--skeleton {
+    min-height: 238px;
+    padding-bottom: 18px;
+  }
+
+  .skeleton-box {
+    border-radius: 8px;
+    background:
+      linear-gradient(
+        100deg,
+        rgb(255 255 255 / 0.025) 10%,
+        rgb(255 255 255 / 0.07) 28%,
+        rgb(255 255 255 / 0.025) 46%
+      );
+    background-size: 220% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+
+  .issue-skeleton__signal {
+    height: 92px;
+    border-radius: 0;
+  }
+
+  .skeleton-box--title {
+    width: 62%;
+    height: 16px;
+    margin: 18px 16px 0;
+  }
+
+  .skeleton-box--meta {
+    width: 44%;
+    height: 10px;
+    margin: 10px 16px 0;
+  }
+
+  .detail-card--skeleton {
+    min-height: 560px;
+    padding: 18px;
+  }
+
+  .detail-skeleton__hero {
+    height: 290px;
+    margin-bottom: 18px;
+  }
+
+  .detail-skeleton__line {
+    width: 100%;
+    height: 12px;
+    margin-top: 10px;
+  }
+
+  .site-footer {
+    min-height: 108px;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid var(--line);
+    color: var(--faint);
+    font-size: 0.68rem;
+    line-height: 1.5;
+  }
+
+  @keyframes shimmer {
+    to {
+      background-position-x: -220%;
+    }
+  }
 }

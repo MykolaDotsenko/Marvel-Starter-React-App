@@ -1,24 +1,30 @@
 @layer tokens {
   :root {
     color-scheme: dark;
-    --bg: #08090d;
-    --surface: #11131a;
-    --surface-raised: #171a22;
-    --surface-soft: #1d2029;
-    --text: #f7f7f4;
-    --muted: #a7aab4;
-    --faint: #747884;
-    --line: #2b2f39;
-    --line-strong: #404550;
-    --accent: #d91019;
-    --accent-strong: #f02a33;
-    --accent-soft: color-mix(in oklch, var(--accent) 14%, transparent);
-    --success: #75e4b3;
-    --focus: #ffdf71;
-    --shadow: 0 24px 80px rgb(0 0 0 / 0.34);
+    --bg: #07080b;
+    --surface: #101219;
+    --surface-raised: #161922;
+    --surface-soft: #1b1f29;
+    --surface-quiet: #0c0e13;
+    --text: #f5f3ed;
+    --paper: #eee9df;
+    --paper-muted: #c9c3b7;
+    --muted: #a3a7b2;
+    --faint: #858a96;
+    --line: #292d36;
+    --line-strong: #3d424e;
+    --accent: #db101b;
+    --accent-strong: #f22530;
+    --accent-deep: #7c0d15;
+    --accent-soft: color-mix(in oklch, var(--accent) 13%, transparent);
+    --success: #78ddb0;
+    --focus: #ffe07a;
+    --shadow-sm: 0 12px 32px rgb(0 0 0 / 0.22);
+    --shadow: 0 28px 90px rgb(0 0 0 / 0.34);
+    --radius-xs: 8px;
     --radius-sm: 12px;
-    --radius-md: 20px;
-    --radius-lg: 30px;
+    --radius-md: 18px;
+    --radius-lg: 26px;
     --page: min(1480px, calc(100% - 40px));
   }
 }

@@ -8,7 +8,7 @@ const secretWars = {
   detailUrl: "https://www.marvel.com/comics/issue/52447",
   seriesId: 19684,
   seriesName: "Secret Wars (2015 - 2016)",
-  onSaleDate: "2015-05-06",
+  onSaleDate: "2015-05-06T00:00:00+0000",
   unlimitedDate: "2015-11-04",
   yearPage: 2015,
 };
@@ -19,7 +19,7 @@ const daredevil = {
   detailUrl: "https://www.marvel.com/comics/issue/70001",
   seriesId: 21000,
   seriesName: "Daredevil (2019 - 2021)",
-  onSaleDate: "2019-02-06",
+  onSaleDate: "2019-02-06T00:00:00+0000",
   unlimitedDate: "2019-08-05",
   yearPage: 2019,
 };
@@ -30,7 +30,7 @@ const avengers = {
   detailUrl: "https://www.marvel.com/comics/issue/80001",
   seriesId: 16452,
   seriesName: "Avengers (2012 - 2015)",
-  onSaleDate: "2012-12-05",
+  onSaleDate: "2012-12-05T00:00:00+0000",
   unlimitedDate: "2013-06-05",
   yearPage: 2012,
 };
@@ -56,7 +56,12 @@ test.beforeEach(async ({ page }) => {
 
     if (detailMatch) {
       const id = Number(detailMatch[1]);
-      const issue = id === secretWars.id ? secretWars : id === daredevil.id ? daredevil : avengers;
+      const issue =
+        id === secretWars.id
+          ? secretWars
+          : id === daredevil.id
+            ? daredevil
+            : avengers;
       await route.fulfill({ json: detail(issue) });
       return;
     }
@@ -67,7 +72,10 @@ test.beforeEach(async ({ page }) => {
         const attempt = (attempts.get(query) ?? 0) + 1;
         attempts.set(query, attempt);
         if (attempt === 1) {
-          await route.fulfill({ status: 503, json: { detail: "temporary provider failure" } });
+          await route.fulfill({
+            status: 503,
+            json: { detail: "temporary provider failure" },
+          });
           return;
         }
         await route.fulfill({ json: { query, items: [daredevil], count: 1 } });
@@ -102,95 +110,156 @@ test.beforeEach(async ({ page }) => {
   });
 
   await page.route("https://images.example.test/**", async (route) => {
-    await route.fulfill({ status: 204, contentType: "image/jpeg", body: "" });
+    await route.fulfill({
+      status: 204,
+      contentType: "image/jpeg",
+      body: "",
+    });
   });
 });
 
-test("search, dossier, saved state and reading progress survive reload", async ({ page }) => {
+test("search, dossier, saved state and journey progress survive reload", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Turn Marvel discovery into a reading plan you can finish/i })).toBeVisible();
 
-  await page.getByLabel("Comic title").fill("Secret Wars");
+  await expect(
+    page.getByRole("heading", {
+      name: /Build a Marvel reading journey you’ll actually finish/i,
+    }),
+  ).toBeVisible();
+
+  await page.getByLabel("Search Marvel comics").fill("Secret Wars");
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page).toHaveURL(/q=Secret\+Wars/);
 
-  await page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }).click();
+  await expect(page).toHaveURL(/q=Secret\+Wars/);
+  await expect(
+    page.getByRole("heading", { name: "Find the next issue on your route." }),
+  ).toBeVisible();
+
+  await expect(page.getByText("May 6, 2015").first()).toBeVisible();
+
+  await page
+    .getByRole("button", { name: `Open issue details for ${secretWars.title}` })
+    .click();
+
   await expect(page).toHaveURL(/issue=52447/);
-  await expect(page.getByRole("heading", { name: secretWars.title, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: secretWars.title, exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("Jonathan Hickman")).toBeVisible();
 
   await page.getByRole("button", { name: "Save issue" }).click();
-  await page.getByRole("button", { name: "Add to reading list" }).click();
-  await page.getByRole("button", { name: "Mark as read" }).click();
-  await expect(page.getByRole("button", { name: /Saved 1/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Reading 1/ })).toBeVisible();
+  await page.getByRole("button", { name: "Add to journey" }).click();
+  await page.getByRole("button", { name: "Mark read" }).click();
+
+  await expect(page.getByRole("button", { name: /Saved.*1 item/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Journey.*1 item/ })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("button", { name: "Saved", exact: true })).toHaveAttribute("aria-pressed", "true");
+
+  await expect(page.getByRole("button", { name: /Saved.*1 item/ })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
   await expect(page.getByRole("button", { name: "Mark unread" })).toBeVisible();
 });
 
-test("saved and recent views expose durable local value", async ({ page }) => {
+test("saved shelf and recent timeline expose specialized local views", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }).click();
+  await page
+    .getByRole("button", { name: `Open issue details for ${secretWars.title}` })
+    .click();
   await page.getByRole("button", { name: "Save issue" }).click();
 
-  await page.getByRole("button", { name: /Saved 1/ }).click();
+  await page.getByRole("button", { name: /Saved.*1 item/ }).click();
   await expect(page).toHaveURL(/view=saved/);
-  await expect(page.getByRole("heading", { name: "Saved issues" })).toBeVisible();
-  await expect(page.getByRole("button", { name: `Open issue details for ${secretWars.title}` })).toBeVisible();
-  await expect(page.getByRole("button", { name: `Open issue details for ${daredevil.title}` })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Issues worth returning to" }),
+  ).toBeVisible();
+  await expect(page.locator(".saved-shelf")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }),
+  ).toBeVisible();
 
-  await page.getByRole("button", { name: /Recent 1/ }).click();
+  await page.getByRole("button", { name: /Recent.*1 item/ }).click();
   await expect(page).toHaveURL(/view=recent/);
-  await expect(page.getByRole("heading", { name: "Recently viewed" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Recently opened dossiers" }),
+  ).toBeVisible();
+  await expect(page.locator(".recent-timeline")).toBeVisible();
+  await expect(page.getByText("Just now")).toBeVisible();
 });
 
 test("a shared issue URL records the issue as recently viewed", async ({ page }) => {
   await page.goto("/?issue=52447&view=recent");
-  await expect(page.getByRole("heading", { name: secretWars.title, exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Recent 1/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: `Open issue details for ${secretWars.title}` })).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", { name: secretWars.title, exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Recent.*1 item/ })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }),
+  ).toBeVisible();
 });
 
 test("initial provider failure has a real retry path", async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel("Comic title").fill("Retry");
+  await page.getByLabel("Search Marvel comics").fill("Retry");
   await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Comic metadata is temporarily unavailable." })).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Comic metadata is temporarily unavailable.",
+    }),
+  ).toBeVisible();
+
   await page.getByRole("button", { name: "Retry request" }).click();
-  await expect(page.getByRole("button", { name: `Open issue details for ${daredevil.title}` })).toBeVisible();
+
+  await expect(
+    page.getByRole("button", { name: `Open issue details for ${daredevil.title}` }),
+  ).toBeVisible();
 });
 
-test("reading list supports progress and deterministic reordering", async ({ page }) => {
+test("journey supports progress and deterministic accessible reordering", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: `Add ${secretWars.title} to reading list` }).click();
-  await page.getByRole("button", { name: `Add ${daredevil.title} to reading list` }).click();
 
-  await page.getByRole("button", { name: /Reading 2/ }).click();
+  await page
+    .getByRole("button", { name: `Add ${secretWars.title} to reading list` })
+    .click();
+  await page
+    .getByRole("button", { name: `Add ${daredevil.title} to reading list` })
+    .click();
+
+  await page.getByRole("button", { name: /Journey.*2 items/ }).click();
   await expect(page.getByText("0% complete")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue journey" })).toBeVisible();
 
   const firstRow = page.locator(".reading-item").filter({ hasText: secretWars.title });
-  await firstRow.getByRole("button", { name: "Read", exact: true }).click();
+  await firstRow.getByRole("button", { name: "Mark read", exact: true }).click();
   await expect(page.getByText("50% complete")).toBeVisible();
 
-  await page.getByRole("button", { name: `Move ${daredevil.title} up` }).click();
+  await page
+    .getByRole("button", { name: `Move ${daredevil.title} up` })
+    .click();
   await expect(page.locator(".reading-item").first()).toContainText(daredevil.title);
 });
 
 test("browser Back and Forward restore URL-driven discovery state", async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel("Comic title").fill("Secret Wars");
+  await page.getByLabel("Search Marvel comics").fill("Secret Wars");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page).toHaveURL(/q=Secret\+Wars/);
 
   await page.getByRole("button", { name: "Daredevil", exact: true }).click();
   await expect(page).toHaveURL(/q=Daredevil/);
-  await expect(page.getByRole("button", { name: `Open issue details for ${daredevil.title}` })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Open issue details for ${daredevil.title}` }),
+  ).toBeVisible();
 
   await page.goBack();
   await expect(page).toHaveURL(/q=Secret\+Wars/);
-  await expect(page.getByRole("button", { name: `Open issue details for ${secretWars.title}` })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }),
+  ).toBeVisible();
 
   await page.goForward();
   await expect(page).toHaveURL(/q=Daredevil/);
@@ -198,15 +267,31 @@ test("browser Back and Forward restore URL-driven discovery state", async ({ pag
 
 test("main interactive state has no automated accessibility violations", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }).click();
+  await page
+    .getByRole("button", { name: `Open issue details for ${secretWars.title}` })
+    .click();
+
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
 });
 
-test("layout does not create horizontal overflow", async ({ page }) => {
+test("layout does not create horizontal overflow in full and compact hero states", async ({ page }) => {
   await page.goto("/");
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+
+  const fullOverflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth,
   );
-  expect(overflow).toBe(false);
+  expect(fullOverflow).toBe(false);
+
+  await page.getByRole("button", { name: "Secret Wars", exact: true }).click();
+  await expect(page.locator(".hero")).toHaveClass(/hero--compact/);
+
+  const compactOverflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth,
+  );
+  expect(compactOverflow).toBe(false);
 });

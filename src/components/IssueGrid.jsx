@@ -1,3 +1,8 @@
+import { Icon } from "./Icon.jsx";
+import { formatIssueDate } from "../ui/formatters.js";
+
+const getTone = (issue) => Math.abs(issue.seriesId ?? issue.id) % 4;
+
 const IssueSkeleton = () => (
   <div className="issue-card issue-card--skeleton" aria-hidden="true">
     <div className="skeleton-box issue-skeleton__signal" />
@@ -16,7 +21,7 @@ const IssueCard = ({
   onReading,
 }) => (
   <article
-    className={`issue-card${selected ? " is-selected" : ""}`}
+    className={`issue-card issue-card--tone-${getTone(issue)}${selected ? " is-selected" : ""}`}
     data-issue-id={issue.id}
   >
     <button
@@ -26,16 +31,22 @@ const IssueCard = ({
       aria-pressed={selected}
       aria-label={`Open issue details for ${issue.title}`}
     >
-      <span className="issue-card__signal" aria-hidden="true">
-        <span>{issue.issueNumber ? `#${issue.issueNumber}` : "ISSUE"}</span>
-        <strong>{issue.year ?? "—"}</strong>
+      <span className="issue-card__mast" aria-hidden="true">
+        <span className="issue-card__issue">
+          <small>Issue</small>
+          <strong>{issue.issueNumber ? `#${issue.issueNumber}` : "—"}</strong>
+        </span>
+        <span className="issue-card__year">{issue.year ?? "—"}</span>
       </span>
+
       <span className="issue-card__body">
         <span className="issue-card__series">{issue.seriesName}</span>
-        <strong>{issue.title}</strong>
+        <strong className="issue-card__title">{issue.title}</strong>
         <span className="issue-card__meta">
-          {issue.onSaleDate || "Publication date unavailable"}
-          {issue.isUnlimited ? " · Marvel Unlimited" : ""}
+          <time dateTime={issue.onSaleDate || undefined}>
+            {formatIssueDate(issue.onSaleDate, { compact: true })}
+          </time>
+          {issue.isUnlimited ? <em>Unlimited</em> : null}
         </span>
       </span>
     </button>
@@ -48,7 +59,7 @@ const IssueCard = ({
         aria-label={saved ? `Remove ${issue.title} from saved` : `Save ${issue.title}`}
         onClick={() => onSaved(issue)}
       >
-        <span aria-hidden="true">{saved ? "★" : "☆"}</span>
+        <Icon name="bookmark" size={17} />
       </button>
       <button
         type="button"
@@ -61,7 +72,7 @@ const IssueCard = ({
         }
         onClick={() => onReading(issue)}
       >
-        <span aria-hidden="true">{inReadingList ? "✓" : "+"}</span>
+        <Icon name={inReadingList ? "check" : "plus"} size={17} />
       </button>
     </div>
   </article>
@@ -81,9 +92,6 @@ export const IssueGrid = ({
   onReading,
   onLoadMore,
   onRetryInitial,
-  showPagination = true,
-  emptyTitle = "No issues matched this search.",
-  emptyDescription = "Try a broader title or one of the quick searches above.",
 }) => {
   if (loading) {
     return (
@@ -114,8 +122,8 @@ export const IssueGrid = ({
     return (
       <div className="status-card">
         <span className="status-card__code">0 ISSUES</span>
-        <h3>{emptyTitle}</h3>
-        <p>{emptyDescription}</p>
+        <h3>No issues matched this search.</h3>
+        <p>Try a broader title or one of the suggested reading routes above.</p>
       </div>
     );
   }
@@ -137,27 +145,25 @@ export const IssueGrid = ({
         ))}
       </div>
 
-      {showPagination ? (
-        <div className="load-more">
-          {error ? (
-            <p className="load-more__error" role="alert">
-              The next page failed to load. Current results are preserved.
-            </p>
-          ) : null}
-          {!ended ? (
-            <button
-              className="secondary-action"
-              type="button"
-              disabled={loadingMore}
-              onClick={onLoadMore}
-            >
-              {loadingMore ? "Loading…" : error ? "Retry next page" : "Load 12 more"}
-            </button>
-          ) : (
-            <p className="load-more__end">End of available results.</p>
-          )}
-        </div>
-      ) : null}
+      <div className="load-more">
+        {error ? (
+          <p className="load-more__error" role="alert">
+            The next page failed to load. Current results are preserved.
+          </p>
+        ) : null}
+        {!ended ? (
+          <button
+            className="secondary-action"
+            type="button"
+            disabled={loadingMore}
+            onClick={onLoadMore}
+          >
+            {loadingMore ? "Loading…" : error ? "Retry next page" : "Load 12 more"}
+          </button>
+        ) : (
+          <p className="load-more__end">End of available results.</p>
+        )}
+      </div>
     </>
   );
 };

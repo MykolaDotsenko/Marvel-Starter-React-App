@@ -1,14 +1,5 @@
-const dateFormatter = new Intl.DateTimeFormat("en", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-});
-
-const formatDate = (value) => {
-  if (!value) return "Unknown";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
-};
+import { Icon } from "./Icon.jsx";
+import { formatIssueDate } from "../ui/formatters.js";
 
 const DetailSkeleton = () => (
   <div className="detail-card detail-card--skeleton" aria-label="Loading issue details">
@@ -36,14 +27,14 @@ export const IssueDetail = ({
       <section className="detail-card detail-card--empty">
         <span className="detail-card__number" aria-hidden="true">01</span>
         <p className="eyebrow">Reading intelligence</p>
-        <h2>Select an issue to open its reading dossier.</h2>
+        <h2>Select an issue to open its dossier.</h2>
         <p>
-          The selected issue lives in the URL, so refresh, Back/Forward and
-          shared links preserve discovery context.
+          Pick any issue to inspect credits and metadata, then save it or place it
+          into your reading journey.
         </p>
         <dl className="empty-metrics">
-          <div><dt>Reading list</dt><dd>{readingCount}</dd></div>
-          <div><dt>Tracking</dt><dd>Local</dd></div>
+          <div><dt>Journey</dt><dd>{readingCount}</dd></div>
+          <div><dt>Storage</dt><dd>Local</dd></div>
         </dl>
       </section>
     );
@@ -70,10 +61,18 @@ export const IssueDetail = ({
         <span className="detail-card__status">
           <span aria-hidden="true" /> Community metadata
         </span>
-        <button type="button" className="text-action" onClick={onClose}>Close</button>
+        <button type="button" className="text-action detail-close" onClick={onClose}>
+          <Icon name="close" size={15} />
+          <span>Close</span>
+        </button>
       </div>
 
       <div className="detail-hero">
+        {issue.cover ? (
+          <img className="detail-backdrop" src={issue.cover} alt="" aria-hidden="true" />
+        ) : null}
+        <div className="detail-hero__veil" aria-hidden="true" />
+
         <div className="detail-cover">
           {issue.cover ? (
             <img src={issue.cover} alt="" loading="eager" decoding="async" />
@@ -83,11 +82,12 @@ export const IssueDetail = ({
             </span>
           )}
         </div>
+
         <div className="detail-hero__content">
           <p className="eyebrow">{issue.seriesName}</p>
           <h2 id="issue-detail-title">{issue.title}</h2>
           <p className="detail-hero__date">
-            {formatDate(issue.onSaleDate)}
+            {formatIssueDate(issue.onSaleDate)}
             {issue.isUnlimited ? " · Marvel Unlimited" : ""}
           </p>
         </div>
@@ -100,7 +100,7 @@ export const IssueDetail = ({
           aria-pressed={saved}
           onClick={() => onSaved(issue)}
         >
-          <span aria-hidden="true">{saved ? "★" : "☆"}</span>
+          <Icon name="bookmark" size={17} />
           {saved ? "Saved" : "Save issue"}
         </button>
 
@@ -110,8 +110,8 @@ export const IssueDetail = ({
           aria-pressed={Boolean(readingEntry)}
           onClick={() => onReading(issue)}
         >
-          <span aria-hidden="true">{readingEntry ? "✓" : "+"}</span>
-          {readingEntry ? "In reading list" : "Add to reading list"}
+          <Icon name={readingEntry ? "check" : "plus"} size={17} />
+          {readingEntry ? "In journey" : "Add to journey"}
         </button>
 
         {readingEntry ? (
@@ -121,7 +121,8 @@ export const IssueDetail = ({
             aria-pressed={readingEntry.read}
             onClick={() => onReadToggle(issue.id, !readingEntry.read)}
           >
-            {readingEntry.read ? "Mark unread" : "Mark as read"}
+            <Icon name="check" size={16} />
+            {readingEntry.read ? "Mark unread" : "Mark read"}
           </button>
         ) : null}
       </div>
@@ -155,13 +156,14 @@ export const IssueDetail = ({
 
       <div className="detail-source">
         <div><span>Series</span><strong>{issue.seriesName}</strong></div>
-        <div><span>On sale</span><strong>{formatDate(issue.onSaleDate)}</strong></div>
+        <div><span>On sale</span><strong>{formatIssueDate(issue.onSaleDate)}</strong></div>
       </div>
 
       {issue.detailUrl ? (
         <div className="detail-external">
           <a className="secondary-action" href={issue.detailUrl} target="_blank" rel="noreferrer">
-            Open on Marvel ↗
+            Open on Marvel
+            <Icon name="external" size={16} />
           </a>
         </div>
       ) : null}

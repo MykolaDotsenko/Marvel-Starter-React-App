@@ -9,6 +9,8 @@ import { Header } from "../components/Header.jsx";
 import { IssueDetail } from "../components/IssueDetail.jsx";
 import { IssueGrid } from "../components/IssueGrid.jsx";
 import { ReadingListPanel } from "../components/ReadingListPanel.jsx";
+import { RecentTimeline } from "../components/RecentTimeline.jsx";
+import { SavedShelf } from "../components/SavedShelf.jsx";
 import { SearchPanel } from "../components/SearchPanel.jsx";
 import { useIssueDetails } from "../hooks/useIssueDetails.js";
 import { useIssueList } from "../hooks/useIssueList.js";
@@ -27,28 +29,20 @@ const quickSearches = ["Secret Wars", "Avengers", "X-Men", "Spider-Man", "Darede
 
 const viewCopy = {
   explore: {
-    eyebrow: "Discovery queue",
+    eyebrow: "Discovery index",
     title: "Latest indexed issues",
-    emptyTitle: "No issues matched this search.",
-    emptyDescription: "Try a broader title or one of the quick searches above.",
   },
   saved: {
-    eyebrow: "Local shortlist",
-    title: "Saved issues",
-    emptyTitle: "Your saved shelf is empty.",
-    emptyDescription: "Save useful issues from Explore or a dossier and they will stay here.",
+    eyebrow: "Saved shelf",
+    title: "Issues worth returning to",
   },
   reading: {
-    eyebrow: "Personal journey",
-    title: "Reading list",
-    emptyTitle: "",
-    emptyDescription: "",
+    eyebrow: "Reading journey",
+    title: "Your route through Marvel",
   },
   recent: {
-    eyebrow: "Local history",
-    title: "Recently viewed",
-    emptyTitle: "No recent issues yet.",
-    emptyDescription: "Open an issue dossier and it will appear here automatically.",
+    eyebrow: "Exploration trail",
+    title: "Recently opened dossiers",
   },
 };
 
@@ -61,7 +55,13 @@ const App = () => {
   }, []);
 
   const isExplore = urlState.view === "explore";
+  const isSaved = urlState.view === "saved";
   const isReading = urlState.view === "reading";
+  const isRecent = urlState.view === "recent";
+  const isCompactHero = Boolean(
+    urlState.query || urlState.issueId || urlState.view !== "explore",
+  );
+
   const issues = useIssueList(urlState.query, { enabled: isExplore });
   const detail = useIssueDetails(urlState.issueId, {
     onLoaded: rememberViewedIssue,
@@ -94,13 +94,6 @@ const App = () => {
     startTransition(() => setUrlState({ view }));
   };
 
-  const activeIssues =
-    urlState.view === "saved"
-      ? preferences.saved
-      : urlState.view === "recent"
-        ? preferences.recent
-        : issues.items;
-
   const copy = viewCopy[urlState.view];
   const title =
     isExplore && urlState.query
@@ -111,15 +104,23 @@ const App = () => {
     ? preferences.readingList.find((item) => item.issue.id === urlState.issueId)
     : null;
 
+  const visibleCount = isSaved
+    ? preferences.saved.length
+    : isRecent
+      ? preferences.recent.length
+      : isReading
+        ? preferences.readingList.length
+        : issues.items.length;
+
   const meta = isReading
-    ? `${preferences.readingList.length} queued`
+    ? `${preferences.readingList.filter((item) => item.read).length}/${preferences.readingList.length} completed`
     : isExplore && issues.loading
       ? "Loading issues…"
       : isExplore && urlState.query
-        ? `${activeIssues.length} search results shown`
+        ? `${issues.items.length} search results shown`
         : isExplore && issues.total
-          ? `${activeIssues.length} shown · ${issues.total.toLocaleString()} indexed`
-          : `${activeIssues.length} shown`;
+          ? `${issues.items.length} shown · ${issues.total.toLocaleString()} indexed`
+          : `${visibleCount} shown`;
 
   return (
     <div className="app-shell">
@@ -132,32 +133,48 @@ const App = () => {
       />
 
       <main id="main-content">
-        <section className="hero" aria-labelledby="hero-title">
-          <div className="hero__copy">
-            <p className="eyebrow">Marvel Reading Atlas / reading intelligence</p>
-            <h1 id="hero-title">
-              Turn Marvel discovery into a reading plan you can finish.
-            </h1>
-            <p className="hero__lede">
-              Search tens of thousands of issues, inspect creator and series
-              metadata, build an ordered reading journey, and track progress
-              locally with no account.
-            </p>
+        <section
+          className={`hero${isCompactHero ? " hero--compact" : ""}`}
+          aria-labelledby="hero-title"
+        >
+          <div className="hero__content">
+            <div className="hero__copy">
+              <p className="eyebrow">Marvel Reading Atlas / reading intelligence</p>
+              <h1 id="hero-title">
+                {isCompactHero
+                  ? "Find the next issue on your route."
+                  : "Build a Marvel reading journey you’ll actually finish."}
+              </h1>
+              <p className="hero__lede">
+                {isCompactHero
+                  ? "Search the archive, inspect a dossier, then keep only what belongs in your journey."
+                  : "Explore tens of thousands of issues, inspect creator and series metadata, and turn discovery into an ordered reading route — with no account required."}
+              </p>
+            </div>
+
+            <SearchPanel
+              key={urlState.query}
+              activeQuery={urlState.query}
+              onSubmit={submitSearch}
+              quickSearches={quickSearches}
+            />
           </div>
 
-          <div className="hero__metrics" aria-label="Product capabilities">
-            <div><strong>37.5k+</strong><span>indexed comic issues</span></div>
-            <div><strong>200</strong><span>bounded reading-list items</span></div>
-            <div><strong>0</strong><span>auth or runtime UI libraries</span></div>
-          </div>
+          <dl className="hero__metrics" aria-label="Product capabilities">
+            <div>
+              <dt>Archive</dt>
+              <dd><strong>37.5K+</strong><span>comic issues</span></dd>
+            </div>
+            <div>
+              <dt>Progress</dt>
+              <dd><strong>Local</strong><span>private by default</span></dd>
+            </div>
+            <div>
+              <dt>Account</dt>
+              <dd><strong>None</strong><span>start immediately</span></dd>
+            </div>
+          </dl>
         </section>
-
-        <SearchPanel
-          key={urlState.query}
-          activeQuery={urlState.query}
-          onSubmit={submitSearch}
-          quickSearches={quickSearches}
-        />
 
         <div className="workspace">
           <section className="explorer" aria-labelledby="explorer-title">
@@ -184,16 +201,43 @@ const App = () => {
                   setPreferences((current) => toggleReadingItem(current, issue))
                 }
               />
-            ) : (
-              <IssueGrid
-                issues={activeIssues}
+            ) : isSaved ? (
+              <SavedShelf
+                issues={preferences.saved}
+                selectedId={urlState.issueId}
+                readingIds={readingIds}
+                onOpen={selectIssue}
+                onSaved={(issue) =>
+                  setPreferences((current) => toggleSaved(current, issue))
+                }
+                onReading={(issue) =>
+                  setPreferences((current) => toggleReadingItem(current, issue))
+                }
+              />
+            ) : isRecent ? (
+              <RecentTimeline
+                entries={preferences.recent}
                 selectedId={urlState.issueId}
                 savedIds={savedIds}
                 readingIds={readingIds}
-                loading={isExplore ? issues.loading : false}
-                loadingMore={isExplore ? issues.loadingMore : false}
-                error={isExplore ? issues.error : null}
-                ended={isExplore ? issues.ended : true}
+                onOpen={selectIssue}
+                onSaved={(issue) =>
+                  setPreferences((current) => toggleSaved(current, issue))
+                }
+                onReading={(issue) =>
+                  setPreferences((current) => toggleReadingItem(current, issue))
+                }
+              />
+            ) : (
+              <IssueGrid
+                issues={issues.items}
+                selectedId={urlState.issueId}
+                savedIds={savedIds}
+                readingIds={readingIds}
+                loading={issues.loading}
+                loadingMore={issues.loadingMore}
+                error={issues.error}
+                ended={urlState.query ? true : issues.ended}
                 onSelect={selectIssue}
                 onSaved={(issue) =>
                   setPreferences((current) => toggleSaved(current, issue))
@@ -201,11 +245,8 @@ const App = () => {
                 onReading={(issue) =>
                   setPreferences((current) => toggleReadingItem(current, issue))
                 }
-                onLoadMore={isExplore ? issues.loadMore : undefined}
-                onRetryInitial={isExplore ? issues.retryInitial : undefined}
-                showPagination={isExplore && !urlState.query}
-                emptyTitle={copy.emptyTitle}
-                emptyDescription={copy.emptyDescription}
+                onLoadMore={issues.loadMore}
+                onRetryInitial={issues.retryInitial}
               />
             )}
           </section>

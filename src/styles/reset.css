@@ -16,11 +16,13 @@
   p,
   dl,
   dd,
-  ul {
+  ul,
+  ol {
     margin: 0;
   }
 
-  ul {
+  ul,
+  ol {
     padding: 0;
     list-style: none;
   }
@@ -30,8 +32,12 @@
     font: inherit;
   }
 
-  img {
+  img,
+  svg {
     display: block;
+  }
+
+  img {
     max-width: 100%;
   }
 
