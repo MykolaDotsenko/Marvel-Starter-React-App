@@ -1,11 +1,8 @@
-@layer components {
   .mobile-bottom-nav,
   .mobile-header-search {
     display: none;
   }
-}
 
-@layer utilities {
   @media (max-width: 700px) {
     :root {
       --page: calc(100% - 24px);
@@ -690,4 +687,3 @@
       margin-inline: auto;
     }
   }
-}
