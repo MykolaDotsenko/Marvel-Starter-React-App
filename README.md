@@ -15,7 +15,9 @@ Marvel Atlas turns an early Create React App training project into a focused pro
 - open a character dossier without losing discovery context
 - inspect recent comic appearances with cover, issue and price metadata
 - save/remove local favorites with no account
-- keep a bounded local recent-character history
+- open a real **Saved** shortlist view
+- open a real **Recently viewed** history view
+- record direct/shared character URLs as viewed after successful load
 - share or reload exact state through `?q=...&character=...`
 - browser Back/Forward support without a router dependency
 - explicit loading, empty, error, retry and pagination-failure states
@@ -78,7 +80,7 @@ The original training implementation coupled request state directly to component
 
 - obsolete list/detail requests are aborted;
 - every request has a **10 second timeout**;
-- successful responses use a short **5 minute memory cache**;
+- successful responses use a short **5 minute / 50-entry LRU-style memory cache**;
 - pagination failure preserves the results already on screen;
 - a secondary comics failure does not destroy a valid character dossier;
 - malformed collection payloads fail closed;
@@ -133,7 +135,7 @@ A meaningful discovery can be copied directly:
 /?q=Spider&character=1009610
 ```
 
-The URL is the durable navigation state. Temporary concerns such as loading flags and API payloads remain in memory.
+The URL is the durable navigation state for search, selected character, and the active Explore / Saved / Recent view. Temporary concerns such as loading flags and API payloads remain in memory.
 
 ## Local preferences
 
@@ -211,20 +213,24 @@ This runs:
 Browser verification:
 
 ```bash
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 npm run test:e2e
 ```
 
-The browser suite mocks the Marvel API so CI does not depend on upstream availability or API quota.
+The browser suite mocks the Marvel API so PR CI is deterministic and does not depend on upstream availability or API quota. A separate scheduled workflow runs a small live Marvel API contract smoke so upstream shape changes become visible without making pull requests flaky.
 
 It verifies:
 
 - search and URL synchronization
-- detail loading
-- comic rendering
+- detail loading and comic rendering
+- Saved and Recent views
+- direct/shared URL recent-history semantics
+- initial request retry
+- non-fatal comics failure
+- Back / Forward restoration
 - favorite persistence across reload
 - automated accessibility
-- mobile horizontal-overflow protection
+- horizontal-overflow protection across the browser matrix
 
 ## Repository structure
 
@@ -242,13 +248,25 @@ src/
 ├── domain/
 │   └── marvel.js
 ├── hooks/
+│   ├── useCharacterCollection.js
 │   ├── useCharacterDetails.js
 │   ├── useCharacterList.js
 │   └── useUrlState.js
 ├── storage/
 │   └── preferences.js
 ├── main.jsx
-└── styles.css
+└── styles/
+    ├── index.css
+    ├── reset.css
+    ├── tokens.css
+    ├── base.css
+    ├── header-hero.css
+    ├── search.css
+    ├── layout.css
+    ├── characters.css
+    ├── detail.css
+    ├── feedback.css
+    └── responsive.css
 
 tests/
 e2e/
@@ -276,3 +294,25 @@ Those tools become justified only when the product requirements create the corre
 Data provided by Marvel. © 2026 MARVEL.
 
 This is an independent portfolio project and is not affiliated with or endorsed by Marvel Entertainment.
+
+
+## Live API contract monitoring
+
+`Live Marvel API Contract` runs weekly and can also be launched manually. It
+checks one real public API response for the minimum shape Marvel Atlas depends
+on. This workflow is deliberately separate from pull-request CI: upstream
+availability should be observable, but it should not make deterministic code
+review gates flaky.
+
+## Recruiter-facing repository metadata
+
+Recommended GitHub metadata for this repository:
+
+**Description**
+
+> Marvel Atlas — a resilient React 19 character discovery app with URL-driven state, abortable Marvel API queries, local favorites, Playwright E2E and accessibility testing.
+
+**Topics**
+
+`react` · `react-19` · `vite` · `marvel-api` · `frontend` ·
+`playwright` · `vitest` · `accessibility` · `javascript` · `portfolio`

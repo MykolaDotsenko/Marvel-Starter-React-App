@@ -72,12 +72,16 @@ export const CharacterGrid = ({
   selectedId,
   favorites,
   loading,
-  loadingMore,
+  loadingMore = false,
   error,
-  ended,
+  ended = true,
   onSelect,
   onFavorite,
   onLoadMore,
+  onRetryInitial,
+  showPagination = true,
+  emptyTitle = "No characters matched this prefix.",
+  emptyDescription = "Try a shorter name or one of the quick-search prompts above.",
 }) => {
   if (loading) {
     return (
@@ -95,9 +99,15 @@ export const CharacterGrid = ({
         <span className="status-card__code">API / RETRY</span>
         <h3>Marvel data is temporarily unavailable.</h3>
         <p>{error.message || "The request could not be completed."}</p>
-        <button className="secondary-action" type="button" onClick={onLoadMore}>
-          Retry request
-        </button>
+        {onRetryInitial ? (
+          <button
+            className="secondary-action"
+            type="button"
+            onClick={onRetryInitial}
+          >
+            Retry request
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -105,9 +115,9 @@ export const CharacterGrid = ({
   if (characters.length === 0) {
     return (
       <div className="status-card">
-        <span className="status-card__code">0 MATCHES</span>
-        <h3>No characters matched this prefix.</h3>
-        <p>Try a shorter name or one of the quick-search prompts above.</p>
+        <span className="status-card__code">0 ITEMS</span>
+        <h3>{emptyTitle}</h3>
+        <p>{emptyDescription}</p>
       </div>
     );
   }
@@ -127,25 +137,31 @@ export const CharacterGrid = ({
         ))}
       </div>
 
-      <div className="load-more">
-        {error ? (
-          <p className="load-more__error" role="alert">
-            The next page failed to load. Your current results are preserved.
-          </p>
-        ) : null}
-        {!ended ? (
-          <button
-            className="secondary-action"
-            type="button"
-            disabled={loadingMore}
-            onClick={onLoadMore}
-          >
-            {loadingMore ? "Loading…" : error ? "Retry next page" : "Load 12 more"}
-          </button>
-        ) : (
-          <p className="load-more__end">End of available results.</p>
-        )}
-      </div>
+      {showPagination ? (
+        <div className="load-more">
+          {error ? (
+            <p className="load-more__error" role="alert">
+              The next page failed to load. Your current results are preserved.
+            </p>
+          ) : null}
+          {!ended ? (
+            <button
+              className="secondary-action"
+              type="button"
+              disabled={loadingMore}
+              onClick={onLoadMore}
+            >
+              {loadingMore
+                ? "Loading…"
+                : error
+                  ? "Retry next page"
+                  : "Load 12 more"}
+            </button>
+          ) : (
+            <p className="load-more__end">End of available results.</p>
+          )}
+        </div>
+      ) : null}
     </>
   );
 };

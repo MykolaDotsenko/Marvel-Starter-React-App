@@ -1,8 +1,13 @@
-import { RECENT_LIMIT, pushRecent, toggleId } from "../domain/marvel.js";
+import {
+  FAVORITES_LIMIT,
+  RECENT_LIMIT,
+  pushRecent,
+  toggleId,
+} from "../domain/marvel.js";
 
 const STORAGE_KEY = "marvel-atlas:preferences:v1";
 
-const normalizeIds = (value, limit = 50) =>
+const normalizeIds = (value, limit) =>
   Array.isArray(value)
     ? [...new Set(value.filter(Number.isInteger))].slice(0, limit)
     : [];
@@ -13,7 +18,7 @@ export const parsePreferences = (value) => {
   }
 
   return {
-    favorites: normalizeIds(value.favorites),
+    favorites: normalizeIds(value.favorites, FAVORITES_LIMIT),
     recent: normalizeIds(value.recent, RECENT_LIMIT),
   };
 };
@@ -29,11 +34,13 @@ export const loadPreferences = (storage = window.localStorage) => {
 
 export const savePreferences = (preferences, storage = window.localStorage) => {
   const normalized = parsePreferences(preferences);
+
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(normalized));
   } catch {
-    // Storage is an enhancement. The product continues to work in-memory.
+    // Local persistence is an enhancement. Browsing remains fully functional.
   }
+
   return normalized;
 };
 
@@ -42,7 +49,11 @@ export const toggleFavorite = (preferences, id) => ({
   favorites: toggleId(preferences.favorites, id),
 });
 
-export const rememberCharacter = (preferences, id) => ({
-  ...preferences,
-  recent: pushRecent(preferences.recent, id),
-});
+export const rememberCharacter = (preferences, id) => {
+  if (preferences.recent[0] === id) return preferences;
+
+  return {
+    ...preferences,
+    recent: pushRecent(preferences.recent, id),
+  };
+};

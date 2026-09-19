@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeCharacter,
   normalizeComic,
+  normalizeViewMode,
   pushRecent,
   sanitizeSearchTerm,
   toggleId,
@@ -37,6 +38,24 @@ describe("Marvel domain", () => {
     expect(character.description).toMatch(/does not currently provide/i);
   });
 
+  it("rejects unsafe image and external-link protocols at the domain boundary", () => {
+    const character = normalizeCharacter({
+      id: 102,
+      name: "Unsafe Payload",
+      thumbnail: {
+        path: "javascript:alert(1)",
+        extension: "jpg",
+      },
+      comics: { available: 0, items: [] },
+      series: { available: 0 },
+      stories: { available: 0 },
+      urls: [{ type: "detail", url: "javascript:alert(1)" }],
+    });
+
+    expect(character.image).toBeNull();
+    expect(character.detailUrl).toBeNull();
+  });
+
   it("fixes the legacy comics-field regression by exposing comics consistently", () => {
     const character = normalizeCharacter({
       id: 7,
@@ -68,18 +87,21 @@ describe("Marvel domain", () => {
     expect(comic.image).toMatch(/^https:/);
   });
 
-  it("keeps list helpers deterministic", () => {
+  it("keeps list helpers deterministic and bounded", () => {
     expect(uniqueById([{ id: 1 }, { id: 1 }, { id: 2 }])).toEqual([
       { id: 1 },
       { id: 2 },
     ]);
     expect(toggleId([2, 1], 2)).toEqual([1]);
     expect(toggleId([1], 2)).toEqual([2, 1]);
+    expect(toggleId(Array.from({ length: 50 }, (_, i) => i + 1), 99)).toHaveLength(50);
     expect(pushRecent([2, 1, 3], 1, 3)).toEqual([1, 2, 3]);
   });
 
-  it("bounds and normalizes search input", () => {
+  it("bounds search input and rejects unknown view modes", () => {
     expect(sanitizeSearchTerm("   Spider    Man   ")).toBe("Spider Man");
     expect(sanitizeSearchTerm("x".repeat(120))).toHaveLength(80);
+    expect(normalizeViewMode("saved")).toBe("saved");
+    expect(normalizeViewMode("anything-else")).toBe("explore");
   });
 });

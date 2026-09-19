@@ -57,4 +57,9 @@ describe("preferences storage", () => {
     });
     expect(start).toEqual({ favorites: [1], recent: [2] });
   });
+
+  it("returns the same preference object when the viewed character is already newest", () => {
+    const start = { favorites: [1], recent: [5, 2] };
+    expect(rememberCharacter(start, 5)).toBe(start);
+  });
 });

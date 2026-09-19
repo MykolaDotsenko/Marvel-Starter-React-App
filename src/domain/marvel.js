@@ -1,27 +1,39 @@
 export const CHARACTER_PAGE_SIZE = 12;
 export const RECENT_LIMIT = 6;
+export const FAVORITES_LIMIT = 50;
+export const COLLECTION_LIMIT = 24;
+export const VIEW_MODES = ["explore", "saved", "recent"];
 
 const DESCRIPTION_FALLBACK =
   "Marvel does not currently provide a description for this character.";
 
-const toHttps = (value = "") => value.replace(/^http:/, "https:");
-
 const safeText = (value) => (typeof value === "string" ? value.trim() : "");
 
-const normalizeUrl = (url) => {
-  const candidate = safeText(url);
+const normalizeHttpsUrl = (value) => {
+  const candidate = safeText(value);
   if (!candidate) return null;
 
   try {
-    const parsed = new URL(toHttps(candidate));
+    const parsed = new URL(candidate.replace(/^http:/, "https:"));
     return parsed.protocol === "https:" ? parsed.toString() : null;
   } catch {
     return null;
   }
 };
 
+const normalizeImage = (thumbnail) => {
+  const path = safeText(thumbnail?.path);
+  const extension = safeText(thumbnail?.extension);
+
+  if (!path || !extension) return null;
+  return normalizeHttpsUrl(`${path}.${extension}`);
+};
+
 export const sanitizeSearchTerm = (value) =>
   safeText(value).replace(/\s+/g, " ").slice(0, 80);
+
+export const normalizeViewMode = (value) =>
+  VIEW_MODES.includes(value) ? value : "explore";
 
 export const normalizeCharacter = (raw) => {
   if (!raw || !Number.isInteger(raw.id) || !safeText(raw.name)) {
@@ -29,18 +41,15 @@ export const normalizeCharacter = (raw) => {
   }
 
   const imagePath = safeText(raw.thumbnail?.path);
-  const imageExtension = safeText(raw.thumbnail?.extension);
-  const image =
-    imagePath && imageExtension ? toHttps(`${imagePath}.${imageExtension}`) : null;
-
   const urls = Array.isArray(raw.urls) ? raw.urls : [];
-  const findUrl = (type) => normalizeUrl(urls.find((entry) => entry?.type === type)?.url);
+  const findUrl = (type) =>
+    normalizeHttpsUrl(urls.find((entry) => entry?.type === type)?.url);
 
   return {
     id: raw.id,
     name: safeText(raw.name),
     description: safeText(raw.description) || DESCRIPTION_FALLBACK,
-    image,
+    image: normalizeImage(raw.thumbnail),
     hasPlaceholderImage: imagePath.includes("image_not_available"),
     comics:
       raw.comics?.items
@@ -60,8 +69,6 @@ export const normalizeComic = (raw) => {
     throw new TypeError("Invalid Marvel comic payload.");
   }
 
-  const imagePath = safeText(raw.thumbnail?.path);
-  const imageExtension = safeText(raw.thumbnail?.extension);
   const price =
     raw.prices?.find((entry) => Number(entry?.price) > 0)?.price ?? null;
 
@@ -71,10 +78,9 @@ export const normalizeComic = (raw) => {
     description: safeText(raw.description),
     issueNumber: Number.isFinite(raw.issueNumber) ? raw.issueNumber : null,
     pageCount: Number.isFinite(raw.pageCount) ? raw.pageCount : null,
-    image:
-      imagePath && imageExtension ? toHttps(`${imagePath}.${imageExtension}`) : null,
+    image: normalizeImage(raw.thumbnail),
     price,
-    detailUrl: normalizeUrl(
+    detailUrl: normalizeHttpsUrl(
       Array.isArray(raw.urls)
         ? raw.urls.find((entry) => entry?.type === "detail")?.url
         : null,
@@ -91,8 +97,12 @@ export const uniqueById = (items) => {
   });
 };
 
-export const toggleId = (ids, id) =>
-  ids.includes(id) ? ids.filter((value) => value !== id) : [id, ...ids];
+export const toggleId = (ids, id, limit = FAVORITES_LIMIT) => {
+  if (ids.includes(id)) {
+    return ids.filter((value) => value !== id);
+  }
+  return [id, ...ids].slice(0, limit);
+};
 
 export const pushRecent = (ids, id, limit = RECENT_LIMIT) =>
   [id, ...ids.filter((value) => value !== id)].slice(0, limit);

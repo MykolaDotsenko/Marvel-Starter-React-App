@@ -42,8 +42,8 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install browser matrix
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Run browser verification
         run: npm run test:e2e

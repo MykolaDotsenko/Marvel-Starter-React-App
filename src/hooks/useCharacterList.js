@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listCharacters } from "../api/marvelClient.js";
 import { CHARACTER_PAGE_SIZE, uniqueById } from "../domain/marvel.js";
 
-const createState = (query) => ({
+const createState = (query, attempt = 0) => ({
   query,
+  attempt,
   items: [],
   loadingMore: false,
   error: null,
@@ -13,6 +14,7 @@ const createState = (query) => ({
 
 export const useCharacterList = (query) => {
   const [state, setState] = useState(() => createState(null));
+  const [attempt, setAttempt] = useState(0);
   const loadMoreController = useRef(null);
 
   useEffect(() => {
@@ -23,6 +25,7 @@ export const useCharacterList = (query) => {
       .then((items) => {
         setState({
           query,
+          attempt,
           items,
           loadingMore: false,
           error: null,
@@ -33,13 +36,13 @@ export const useCharacterList = (query) => {
       .catch((error) => {
         if (error?.name === "AbortError") return;
         setState({
-          ...createState(query),
+          ...createState(query, attempt),
           error,
         });
       });
 
     return () => controller.abort();
-  }, [query]);
+  }, [attempt, query]);
 
   useEffect(
     () => () => {
@@ -49,22 +52,26 @@ export const useCharacterList = (query) => {
   );
 
   const current =
-    state.query === query
+    state.query === query && state.attempt === attempt
       ? state
-      : {
-          ...createState(query),
-          loadingMore: false,
-        };
+      : createState(query, attempt);
+
+  const retryInitial = useCallback(() => {
+    setAttempt((value) => value + 1);
+  }, []);
 
   const loadMore = useCallback(async () => {
-    if (current.loadingMore || current.ended) return;
+    const hasInitialError = current.error && current.items.length === 0;
+    if (current.loadingMore || current.ended || hasInitialError) return;
 
     loadMoreController.current?.abort();
     const controller = new AbortController();
     loadMoreController.current = controller;
 
     setState((existing) => ({
-      ...(existing.query === query ? existing : createState(query)),
+      ...(existing.query === query && existing.attempt === attempt
+        ? existing
+        : createState(query, attempt)),
       loadingMore: true,
       error: null,
     }));
@@ -77,7 +84,11 @@ export const useCharacterList = (query) => {
       });
 
       setState((existing) => {
-        const base = existing.query === query ? existing : createState(query);
+        const base =
+          existing.query === query && existing.attempt === attempt
+            ? existing
+            : createState(query, attempt);
+
         return {
           ...base,
           items: uniqueById([...base.items, ...nextItems]),
@@ -90,16 +101,27 @@ export const useCharacterList = (query) => {
     } catch (error) {
       if (error?.name === "AbortError") return;
       setState((existing) => ({
-        ...(existing.query === query ? existing : createState(query)),
+        ...(existing.query === query && existing.attempt === attempt
+          ? existing
+          : createState(query, attempt)),
         loadingMore: false,
         error,
       }));
     }
-  }, [current.ended, current.loadingMore, current.offset, query]);
+  }, [
+    attempt,
+    current.ended,
+    current.error,
+    current.items.length,
+    current.loadingMore,
+    current.offset,
+    query,
+  ]);
 
   return {
     ...current,
-    loading: state.query !== query,
+    loading: state.query !== query || state.attempt !== attempt,
     loadMore,
+    retryInitial,
   };
 };

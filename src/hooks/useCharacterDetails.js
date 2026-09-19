@@ -8,7 +8,7 @@ const emptyState = {
   error: null,
 };
 
-export const useCharacterDetails = (characterId) => {
+export const useCharacterDetails = (characterId, { onLoaded } = {}) => {
   const [state, setState] = useState(emptyState);
 
   useEffect(() => {
@@ -32,6 +32,7 @@ export const useCharacterDetails = (characterId) => {
           comics,
           error: null,
         });
+        onLoaded?.(character);
       })
       .catch((error) => {
         if (error?.name === "AbortError") return;
@@ -44,7 +45,7 @@ export const useCharacterDetails = (characterId) => {
       });
 
     return () => controller.abort();
-  }, [characterId]);
+  }, [characterId, onLoaded]);
 
   if (!characterId) {
     return {

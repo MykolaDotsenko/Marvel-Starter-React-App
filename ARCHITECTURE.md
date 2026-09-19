@@ -143,3 +143,47 @@ pure domain + storage unit tests
 
 The browser suite mocks the Marvel API so CI is deterministic and does not
 consume API quota or depend on upstream availability.
+
+
+## Hardening notes
+
+### Saved and Recent are product views
+
+Favorites and recent history are no longer write-only counters. The URL now
+supports `view=saved` and `view=recent`, and those collections are hydrated
+through the same API boundary as discovery. Only ids are persisted, which keeps
+local storage small and avoids persisting stale Marvel payloads.
+
+A directly opened `?character=<id>` link is recorded as recently viewed only
+after the character request succeeds. That makes the domain meaning
+"successfully viewed", not merely "clicked".
+
+### Retry state
+
+Initial-load retry and pagination retry are separate transitions. An initial
+network failure cannot temporarily render the semantic "0 matches" state, and a
+pagination failure preserves existing cards while allowing a real retry.
+
+### Bounded response cache
+
+The API cache combines:
+
+- 5-minute TTL;
+- 50-entry maximum;
+- recency refresh on cache reads;
+- oldest-entry eviction at capacity.
+
+The cache is an optimization only. It never becomes durable application state.
+
+### Cross-browser verification
+
+The deterministic Playwright suite runs on Chromium, Firefox, WebKit, and a
+mobile Chromium profile. A separate scheduled smoke checks the real Marvel API
+contract without making pull-request CI depend on upstream uptime.
+
+### Styling boundaries
+
+The previous monolithic stylesheet is split by responsibility: reset, tokens,
+base, header/hero, search, layout, character cards, detail, feedback states, and
+responsive behavior. Cascade layers preserve explicit ordering without a CSS
+framework.
