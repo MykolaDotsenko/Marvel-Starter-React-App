@@ -616,14 +616,11 @@
   
       .quick-searches > span {
         flex: 0 0 auto;
-        position: sticky;
-        left: 0;
-        z-index: 1;
+        position: static;
         min-height: 32px;
         display: inline-flex;
         align-items: center;
         margin: 0;
-        background: var(--bg);
         padding-right: 4px;
         font-size: 0.72rem;
       }
@@ -631,6 +628,7 @@
       .quick-searches button {
         flex: 0 0 auto;
         min-height: 34px;
+        scroll-margin-block: 84px calc(var(--mobile-nav-height) + 12px);
         scroll-snap-align: start;
         padding: 6px 10px;
         font-size: 0.74rem;

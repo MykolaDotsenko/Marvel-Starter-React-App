@@ -257,7 +257,9 @@ test("phone search stays one-line and quick routes scroll horizontally", async (
     submit.boundingBox(),
   ]);
 
-  expect(Math.abs((inputBox?.y ?? 0) - (submitBox?.y ?? 0))).toBeLessThan(10);
+  const inputCenterY = (inputBox?.y ?? 0) + (inputBox?.height ?? 0) / 2;
+  const submitCenterY = (submitBox?.y ?? 0) + (submitBox?.height ?? 0) / 2;
+  expect(Math.abs(inputCenterY - submitCenterY)).toBeLessThan(2);
   expect(shellBox?.height).toBeLessThanOrEqual(62);
   expectTouchTarget(submitBox);
 
