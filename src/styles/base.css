@@ -3,8 +3,8 @@
     min-width: 320px;
     min-height: 100vh;
     background:
-      radial-gradient(circle at 10% 0%, rgb(240 20 30 / 0.13), transparent 28rem),
-      radial-gradient(circle at 90% 14%, rgb(255 255 255 / 0.055), transparent 22rem),
+      radial-gradient(circle at 5% -10%, rgb(219 16 27 / 0.15), transparent 34rem),
+      radial-gradient(circle at 90% 10%, rgb(255 255 255 / 0.04), transparent 28rem),
       var(--bg);
     color: var(--text);
     font-family:
@@ -40,14 +40,24 @@
     left: 12px;
     transform: translateY(-160%);
     border-radius: 999px;
-    background: white;
+    background: var(--paper);
     color: #090a0e;
     padding: 10px 16px;
-    font-weight: 800;
+    font-weight: 850;
   }
 
   .skip-link:focus {
     transform: translateY(0);
+  }
+
+  .sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    clip-path: inset(50%) !important;
   }
 
   .app-shell {
@@ -57,34 +67,39 @@
 
   main {
     display: grid;
-    gap: 28px;
+    gap: 0;
   }
 
   .eyebrow {
-    color: var(--muted);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.16em;
+    color: var(--paper-muted);
+    font-size: 0.68rem;
+    font-weight: 850;
+    letter-spacing: 0.17em;
     text-transform: uppercase;
   }
 
   h1,
   h2,
   h3 {
-    letter-spacing: -0.035em;
-    line-height: 1;
+    color: var(--paper);
+    letter-spacing: -0.04em;
+    line-height: 0.98;
   }
 
   h1 {
-    font-size: clamp(2.8rem, 7vw, 7rem);
-    max-width: 13ch;
+    font-size: clamp(3rem, 6.4vw, 6.4rem);
+    max-width: 11.5ch;
   }
 
   h2 {
-    font-size: clamp(1.65rem, 3vw, 2.65rem);
+    font-size: clamp(1.7rem, 2.7vw, 2.6rem);
   }
 
   h3 {
-    font-size: 1.2rem;
+    font-size: 1.16rem;
+  }
+
+  .icon {
+    flex: 0 0 auto;
   }
 }
