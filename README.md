@@ -1,54 +1,71 @@
-# Marvel Atlas
+# Marvel Reading Atlas
 
 [![Quality](https://github.com/MykolaDotsenko/Marvel-Starter-React-App/actions/workflows/quality.yml/badge.svg)](https://github.com/MykolaDotsenko/Marvel-Starter-React-App/actions/workflows/quality.yml)
 
-**A resilient, accessible Marvel character discovery experience built as a modern React engineering case study.**
+**A React 19 comic-discovery and reading-planning product built around a live, community-maintained Marvel metadata API.**
 
-[Live demo](https://marvel-starter-phi.vercel.app/) · [Architecture](./ARCHITECTURE.md) · [Browser tests](./e2e/marvel-atlas.spec.js)
+[Live demo on Vercel](https://marvel-starter-phi.vercel.app/) · [GitHub Pages mirror](https://mykoladotsenko.github.io/Marvel-Starter-React-App/) · [Architecture](./ARCHITECTURE.md) · [Browser tests](./e2e/reading-atlas.spec.js)
 
-Marvel Atlas turns an early Create React App training project into a focused product for searching Marvel characters, opening a shareable character dossier, inspecting recent comics, and keeping a local shortlist.
+## Why this project changed
+
+This repository began as a small Marvel character training app. The original Marvel Developer API later became unavailable, so keeping the old UI alive against a dead provider would have been the wrong product decision.
+
+Marvel Reading Atlas treats that external failure as an engineering constraint:
+
+1. isolate the provider boundary;
+2. move to the maintained [Marvel Metadata API](https://marvel.emreparker.com/);
+3. redesign the domain around data the provider is actually strong at;
+4. turn a character browser into a useful comic-reading planner.
+
+The result is not a hidden endpoint swap. It is a different product with a clearer user problem: **find Marvel issues, turn discovery into an ordered reading journey, and track progress without an account.**
 
 ## Product capabilities
 
-- search Marvel characters by name prefix
-- browse a paginated alphabetical character feed
-- open a character dossier without losing discovery context
-- inspect recent comic appearances with cover, issue and price metadata
-- save/remove local favorites with no account
-- open a real **Saved** shortlist view
-- open a real **Recently viewed** history view
-- record direct/shared character URLs as viewed after successful load
-- share or reload exact state through `?q=...&character=...`
-- browser Back/Forward support without a router dependency
-- explicit loading, empty, error, retry and pagination-failure states
-- responsive desktop/mobile experience
-- reduced-motion and forced-colors support
-- no analytics, cookies, account system, or tracking
+- search 37,500+ indexed Marvel issues by title
+- browse the newest indexed issues with bounded pagination
+- open a shareable issue dossier through `?q=...&issue=...`
+- inspect cover, series, publication date, page count and creator credits
+- save issues to a local shortlist
+- maintain a bounded recently-viewed history
+- build an ordered reading list of up to 200 issues
+- move issues up/down without an inaccessible drag-only interaction
+- mark issues read/unread and see completion progress
+- continue from the next unread issue
+- persist deliberate user state as normalized issue snapshots
+- keep Saved / Recent / Reading useful during provider downtime without N+1 hydration requests
+- support browser Back/Forward with native History / URLSearchParams
+- expose deterministic loading, empty, retry and pagination states
+- run on both Vercel and GitHub Pages with no API key
+- support reduced motion, forced colors and mobile reflow
+- use no analytics, account system, cookies or tracking
 
-## Stack
-
-### Runtime
+## Runtime stack
 
 - React **19.3**
 - React DOM **19.3**
-- semantic HTML
-- modern CSS
-- native History / URLSearchParams
-- Web Storage API
-- Fetch API + AbortController
-- Marvel public API called directly from the browser with a public API key
-
-There is **no runtime state library, router, UI kit, animation package, or API client dependency**.
-
-### Verification
-
 - Vite **8.3**
-- Vitest **5**
-- ESLint **10**
-- Playwright **1.63**
-- axe-core
-- GitHub Actions
-- Dependabot
+- semantic HTML
+- modern layered CSS
+- Fetch + AbortController
+- History / URLSearchParams
+- Web Storage
+- [Marvel Metadata API](https://marvel.emreparker.com/)
+
+Runtime dependencies are only React and React DOM. There is no router, state library, UI kit, animation package or API-client package.
+
+## Provider contract
+
+The active provider is an unofficial open-source metadata service, not Marvel Entertainment. Its current source exposes:
+
+- `/v1/issues`
+- `/v1/issues/{id}`
+- `/v1/search/issues`
+- series and creator endpoints for future expansion
+- browser GET CORS
+- a 60 requests/minute limit with burst allowance
+- metadata only; no comic content
+
+The app intentionally makes **one detail request only when an issue dossier is opened**. Explore/search cards consume summary payloads directly, avoiding N+1 detail fetches.
 
 ## Architecture
 
@@ -57,291 +74,150 @@ React UI
   |
   +--> feature hooks
   |       |
-  |       +--> Marvel API boundary
+  |       +--> Marvel Metadata provider adapter
   |       |       |
-  |       |       +--> pure domain normalization
+  |       |       +--> pure issue normalization
   |       |
   |       +--> URL/history state
   |       |
-  |       +--> local preference adapter
+  |       +--> local reading-library adapter
   |
-  +--> semantic HTML + CSS
+  +--> semantic HTML + layered CSS
 ```
 
-The important dependency rule is:
+Dependency rule:
 
-> **External Marvel payloads are normalized before UI components see them, and pure domain rules do not know React or the browser exists.**
+> External provider payloads are normalized before UI components see them. Local reading state stores product-domain snapshots, not provider response blobs.
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full rationale and rejected alternatives.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full rationale.
 
 ## Reliability model
 
-The original training implementation coupled request state directly to components and could leave stale requests alive. Marvel Atlas makes the network boundary explicit:
+- obsolete list/detail requests are aborted
+- every network request has a **10 second timeout**
+- successful responses use a **5 minute / 50-entry LRU-style memory cache**
+- pagination failures preserve already-loaded results
+- malformed list items fail closed instead of breaking the grid
+- one-character searches are stopped before hitting the provider contract
+- Saved / Recent / Reading list screens render from local snapshots and do not start a provider list request
+- localStorage corruption resets safely
+- React Strict Mode exercises effect cleanup in development
+- weekly live API contract smoke detects upstream drift separately from deterministic PR CI
 
-- obsolete list/detail requests are aborted;
-- every request has a **10 second timeout**;
-- successful responses use a short **5 minute / 50-entry LRU-style memory cache**;
-- pagination failure preserves the results already on screen;
-- a secondary comics failure does not destroy a valid character dossier;
-- malformed collection payloads fail closed;
-- query changes cannot render an old character list over a newer search;
-- storage failure never prevents browsing.
+## URL state
 
-React Strict Mode is enabled so development exercises effect setup/cleanup behavior.
-
-## Bugs fixed from the original project
-
-### Character comics silently missing
-
-The original service returned:
-
-```js
-cocomics: char.comics.items
-```
-
-while the detail UI expected:
-
-```js
-char.comics
-```
-
-The mismatch meant the comics list never reached the component. The new domain normalizer has one canonical `comics` field and a regression test for this exact failure.
-
-### Direct DOM mutation for selection
-
-The old character list maintained an array of DOM refs and toggled CSS classes through `classList`. Selection is now ordinary React state represented in the URL and rendered declaratively with `aria-pressed`.
-
-### Requests without cancellation
-
-Character-list, random-character and detail requests previously continued after state changes or unmount. The current hooks use `AbortController` cleanup and bounded timeouts.
-
-### Non-recovering error state
-
-The previous random-character request could enter an error state and fail to reset it cleanly on another attempt. The new request state is initialized explicitly for every operation and all error surfaces provide deterministic recovery behavior.
-
-### Hard-coded comics screen
-
-The previous `ComicsList` / `SingleComic` surfaces were static mock markup with `href="#"`. Character dossiers now load real comic metadata from Marvel.
-
-### Legacy toolchain
-
-Create React App / `react-scripts` was replaced with Vite 8 and the current React 19 line. The production dependency graph is now only React + React DOM.
-
-## URL-driven state
-
-A meaningful discovery can be copied directly:
+Example:
 
 ```text
-/?q=Spider&character=1009610
+/?q=Secret+Wars&issue=52447&view=reading
 ```
 
-The URL is the durable navigation state for search, selected character, and the active Explore / Saved / Recent view. Temporary concerns such as loading flags and API payloads remain in memory.
+The URL owns shareable navigation state:
 
-## Local preferences
+- search query
+- selected issue
+- Explore / Saved / Reading / Recent view
 
-Only deliberate local user intent is persisted:
+Transient loading flags, request errors and provider payloads remain in memory.
+
+## Local reading state
+
+The browser stores only deliberate user intent plus compact normalized issue snapshots:
 
 ```json
 {
-  "favorites": [1009610],
-  "recent": [1009610, 1009629]
+  "saved": [{ "id": 52447, "title": "Secret Wars (2015) #1" }],
+  "recent": [{ "id": 52447, "title": "Secret Wars (2015) #1" }],
+  "readingList": [
+    {
+      "issue": { "id": 52447, "title": "Secret Wars (2015) #1" },
+      "read": true
+    }
+  ]
 }
 ```
 
-Corrupt storage is normalized safely and recent history is bounded.
+Snapshots deliberately keep the user's reading journey legible even if the community provider is temporarily unreachable.
 
-## Accessibility
+## Quality gates
 
-The product uses native semantics first:
+```bash
+npm ci
+npm run check
+npm run test:e2e
+```
 
-- skip navigation
-- one clear page heading hierarchy
-- labeled search field
-- native buttons and links
-- descriptive action names
-- `aria-pressed` for selected and favorite state
-- visible keyboard focus
-- useful status announcements
-- reduced-motion support
-- forced-colors support
-- mobile reflow without horizontal overflow
+Pull requests verify:
 
-The Playwright suite runs automated axe analysis on the main interactive state.
+- ESLint with zero warnings
+- Vitest domain/API/storage tests
+- Vite production build
+- production dependency audit
+- Chromium
+- Firefox
+- WebKit
+- Pixel 7 viewport
+- axe automated accessibility scan
+- horizontal-overflow regression
+- GitHub Pages base-path/provider bundle contract
 
-## Run locally
+A separate weekly smoke workflow checks the live provider so upstream availability cannot make ordinary pull requests flaky.
 
-Requirements:
+## Local development
 
-- Node.js 24+
-- a Marvel **public** API key if you want to use your own key
+Requirements: Node.js 24+
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Optional:
+No API key is required.
+
+Optional provider override:
 
 ```bash
-cp .env.example .env.local
+VITE_MARVEL_METADATA_API=https://example.test/v1 npm run dev
 ```
 
-Then set:
+## Deployment
+
+### Vercel
+
+`vercel.json` builds Vite's `dist/` output.
+
+### GitHub Pages
+
+The Pages workflow builds with:
 
 ```text
-VITE_MARVEL_PUBLIC_KEY=your_public_marvel_key
+VITE_BASE_PATH=/Marvel-Starter-React-App/
 ```
 
-Marvel Atlas intentionally uses Marvel's browser integration: the **public key is client-visible** and requests go directly to `gateway.marvel.com` in local, Vercel, and GitHub Pages builds.
+and asserts that the client bundle targets the current Marvel Metadata API rather than the retired Marvel gateway.
 
-No Marvel private key is required by this project. Do not add a private key to Vite variables, GitHub Pages, source code, or the browser bundle.
+## Accessibility
 
-If the Marvel developer account restricts browser referrers, allow the deployed origins used by this repository, including:
+- skip navigation
+- semantic headings, lists, buttons and native progress element
+- descriptive action names
+- `aria-pressed` for durable toggles
+- visible keyboard focus
+- reduced-motion support
+- forced-colors support
+- no drag-only reading-list reorder interaction
+- mobile reflow without horizontal overflow
 
-```text
-https://marvel-starter-phi.vercel.app
-https://mykoladotsenko.github.io
-```
+## Data and trademark note
 
-The checked-in demo public key can be overridden with `VITE_MARVEL_PUBLIC_KEY` when a different public key is desired.
+Marvel Reading Atlas is an unofficial portfolio project and is not affiliated with Marvel Entertainment. Metadata comes from the community-maintained Marvel Metadata API. No comic pages or paid comic content are distributed by this repository.
 
-## Quality gates
-
-Fast verification:
-
-```bash
-npm run check
-```
-
-This runs:
-
-1. ESLint with zero warnings
-2. deterministic Vitest unit tests
-3. Vite production build
-
-Browser verification:
-
-```bash
-npx playwright install chromium firefox webkit
-npm run test:e2e
-```
-
-The browser suite mocks the Marvel API so PR CI is deterministic and does not depend on upstream availability or API quota. A separate scheduled workflow runs a small live Marvel API contract smoke so upstream shape changes become visible without making pull requests flaky.
-
-It verifies:
-
-- search and URL synchronization
-- detail loading and comic rendering
-- Saved and Recent views
-- direct/shared URL recent-history semantics
-- initial request retry
-- non-fatal comics failure
-- Back / Forward restoration
-- favorite persistence across reload
-- automated accessibility
-- horizontal-overflow protection across the browser matrix
-
-## Repository structure
-
-```text
-src/
-├── api/
-│   └── marvelClient.js
-├── app/
-│   └── App.jsx
-├── components/
-│   ├── CharacterDetail.jsx
-│   ├── CharacterGrid.jsx
-│   ├── Header.jsx
-│   └── SearchPanel.jsx
-├── domain/
-│   └── marvel.js
-├── hooks/
-│   ├── useCharacterCollection.js
-│   ├── useCharacterDetails.js
-│   ├── useCharacterList.js
-│   └── useUrlState.js
-├── storage/
-│   └── preferences.js
-├── main.jsx
-└── styles/
-    ├── index.css
-    ├── reset.css
-    ├── tokens.css
-    ├── base.css
-    ├── header-hero.css
-    ├── search.css
-    ├── layout.css
-    ├── characters.css
-    ├── detail.css
-    ├── feedback.css
-    └── responsive.css
-
-tests/
-e2e/
-.github/workflows/
-```
-
-## Scope discipline
-
-Marvel Atlas is intentionally not a full Marvel social network, ecommerce store, or server-rendered catalog.
-
-The current product does not need:
-
-- Redux or another global store
-- React Router for one screen and two URL parameters
-- TanStack Query for one list + one detail query graph
-- a component framework
-- a custom backend
-- authentication
-- a database
-
-Those tools become justified only when the product requirements create the corresponding complexity.
-
-## Attribution
-
-Data provided by Marvel. © 2026 MARVEL.
-
-This is an independent portfolio project and is not affiliated with or endorsed by Marvel Entertainment.
-
-
-## Live API contract monitoring
-
-`Live Marvel API Contract` runs weekly and can also be launched manually. It
-checks one real public API response for the minimum shape Marvel Atlas depends
-on. This workflow is deliberately separate from pull-request CI: upstream
-availability should be observable, but it should not make deterministic code
-review gates flaky.
-
-## Recruiter-facing repository metadata
-
-Recommended GitHub metadata for this repository:
+## Recommended repository metadata
 
 **Description**
 
-> Marvel Atlas — a resilient React 19 character discovery app with URL-driven state, abortable Marvel API queries, local favorites, Playwright E2E and accessibility testing.
+> Marvel Reading Atlas — React 19 comic discovery, ordered local reading lists, resilient provider architecture, Playwright E2E and accessibility testing.
 
 **Topics**
 
-`react` · `react-19` · `vite` · `marvel-api` · `frontend` ·
-`playwright` · `vitest` · `accessibility` · `javascript` · `portfolio`
-
-
-## Browser API boundary
-
-Marvel Atlas is intentionally backend-free. The browser calls the public Marvel catalog directly:
-
-```text
-Browser
-  |
-  +--> gateway.marvel.com/v1/public
-          |
-          +--> public API key
-          +--> bounded query parameters
-          +--> 10s client timeout
-          +--> 5-minute / 50-entry in-memory cache
-```
-
-The public key is expected to be visible in a client-side application. No private Marvel credential is stored or required.
-
-This keeps the portfolio deployment portable across Vercel and GitHub Pages and removes an unnecessary serverless hop. Browser-domain authorization, when enabled for the Marvel developer account, is the deployment-level access control.
+`react` · `react-19` · `vite` · `marvel` · `frontend` · `playwright` · `vitest` · `accessibility` · `localstorage` · `portfolio`

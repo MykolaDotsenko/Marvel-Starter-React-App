@@ -1,215 +1,200 @@
-# Marvel Atlas architecture
+# Marvel Reading Atlas — Architecture
 
-## Goal
+## Product boundary
 
-Marvel Atlas is intentionally a client-side React product. The application reads
-public Marvel catalog data, derives presentation state, and stores only local
-user preferences. There is no business requirement for a backend, global state
-library, router dependency, or component framework.
+Marvel Reading Atlas is a client-side reading-planning product, not a generic API viewer.
 
-The architecture optimizes for **clear dependency direction, recoverable network
-behavior, URL-addressable discovery state, and a small runtime surface**.
+The application owns:
+
+- search/navigation UX
+- issue normalization
+- Saved / Recent snapshots
+- ordered reading-list state
+- read/unread progress
+- retry and cancellation behavior
+- URL-driven navigation
+- accessibility and responsive behavior
+
+The provider owns comic metadata.
+
+## Why the domain changed
+
+The repository originally modeled Marvel characters against the retired Marvel Developer API. When that provider ceased to be a viable runtime dependency, preserving the old character UI would have coupled the product to data that no longer existed.
+
+The redesign follows the maintained provider's actual strengths:
+
+```text
+old: Character -> recent comics
+new: Issue -> ordered reading journey
+```
+
+This is a product migration, not merely an endpoint migration.
 
 ## Dependency direction
 
 ```text
-React UI
-  |
-  +--> feature hooks ----------------------+
-  |       |                                |
-  |       +--> API boundary                +--> URL state
-  |       |      |                         |
-  |       |      +--> domain normalizers   +--> preferences adapter
-  |       |
-  |       +--> deterministic state
-  |
-  +--> semantic HTML + CSS
+components
+   |
+feature hooks + storage
+   |
+domain normalization
+   |
+provider client
 ```
 
-The domain module does not import React, browser storage, or DOM APIs.
+Components never consume raw provider responses.
 
-## Boundaries
+## Provider adapter
 
-### `src/api/marvelClient.js`
+`src/api/marvelMetadataClient.js` is the only module that knows:
 
-Owns:
+- the provider base URL
+- `/issues`
+- `/search/issues`
+- `/issues/{id}`
+- provider pagination fields such as `has_next`
 
-- Marvel endpoint construction;
-- the public browser API key;
-- request timeout and cancellation;
-- response-shape validation at the collection boundary;
-- short-lived response caching;
-- character/comic normalization.
+The rest of the application consumes normalized issue objects.
 
-It does **not** own UI state.
+A future Metron or self-hosted provider can therefore implement the same domain contract without redesigning the UI state model.
 
-### `src/domain/marvel.js`
+## Request strategy
 
-Owns pure rules:
+### Explore feed
 
-- external payload normalization;
-- HTTPS URL normalization;
-- fallback descriptions;
-- search-term normalization;
-- identity-based deduplication;
-- favorites/recent list transitions.
+`GET /v1/issues?limit=12&offset=N`
 
-These rules are unit tested without a browser.
+Summary payloads render cards directly.
 
-### `src/storage/preferences.js`
+### Search
 
-Owns durable local user intent only:
+`GET /v1/search/issues?q=...&limit=48`
 
-- favorite character ids;
-- recent character ids.
+The provider requires at least two search characters. The UI prevents a one-character request before the network boundary.
 
-Search text, loading flags, errors, open panels, and API data are deliberately
-not persisted. Corrupt storage falls back safely.
+### Dossier
 
-### `src/hooks/*`
+`GET /v1/issues/{id}`
 
-Hooks orchestrate external systems:
+This is the only detail request. It provides cover, description, page count and creator credits.
 
-- URL/history synchronization;
-- abortable character-list requests;
-- selected-character dossier requests.
+No list screen fans out into per-card detail requests.
 
-Every network effect returns cleanup through `AbortController`, so React
-Strict Mode can run setup/cleanup stress cycles without leaking obsolete
-requests.
+### Local views
 
-## URL as product state
+Saved, Recent and Reading list screens render their normalized local snapshots and pause the Explore list hook. They do not silently spend provider requests in the background.
 
-The meaningful discovery state is shareable:
+Selecting a local issue still performs one detail request because the dossier intentionally shows current provider metadata.
+
+## Resilience
+
+Every provider request:
+
+- is cancellable
+- has a 10-second timeout
+- participates in a 5-minute / 50-entry LRU-style cache
+
+Malformed list items are dropped individually.
+
+PR browser tests mock the provider deterministically. A weekly live contract smoke first loads one real issue summary, then opens that returned ID to verify the detail contract. This avoids hard-coding a single issue as a health dependency.
+
+## Local-first reading state
+
+The storage adapter persists compact issue snapshots rather than IDs only.
+
+That is deliberate. Losing every title when a community provider is temporarily unavailable would destroy the value of a user-curated reading journey.
+
+Stored state is bounded:
+
+- Saved: 50
+- Recent: 8
+- Reading list: 200
+
+Reading entries use:
+
+```js
+{
+  issue: normalizedIssueSummary,
+  read: boolean
+}
+```
+
+No remote account or synchronization layer is required.
+
+## Reading-list ordering
+
+The application uses explicit Up / Down controls rather than a drag-only interface.
+
+Reasons:
+
+- keyboard accessible by default
+- predictable on touch devices
+- no runtime dependency
+- no hidden gesture contract
+- trivial immutable state transition
+- straightforward cross-browser testing
+
+Drag-and-drop can be added later as progressive enhancement without becoming the only reorder mechanism.
+
+## URL ownership
+
+The URL stores only shareable navigation state:
+
+- `q`
+- `issue`
+- `view`
+
+Loading flags, errors and response objects remain in memory.
+
+Browser Back/Forward therefore restores meaningful discovery state without React Router.
+
+## CSS architecture
+
+The stylesheet is split by responsibility and ordered with cascade layers:
 
 ```text
-/?q=Spider&character=1009610
+reset
+tokens
+base
+components
+utilities
 ```
 
-Search and selected-character state therefore survive refresh, browser Back /
-Forward, and copy-paste without adding React Router for a one-screen product.
+Product-specific modules include:
 
-## Reliability model
+- search
+- issues
+- detail
+- reading
+- feedback
+- responsive
 
-- **10 second timeout** prevents indefinite loading.
-- **Abort on query/selection change** prevents obsolete responses from winning.
-- **5 minute in-memory cache** reduces duplicate catalog calls without hiding
-  freshness for long periods.
-- **Existing results stay visible** when pagination fails.
-- **Comic failure is non-fatal**: a character dossier can still render when the
-  secondary comic request fails.
-- **Unexpected API collections fail closed** instead of flowing arbitrary data
-  into components.
-- **Local storage is optional**: quota/privacy failures do not break the app.
+## Rejected alternatives
 
-## Why no TanStack Query?
+### Keep the retired Marvel gateway
 
-For this app the query graph is tiny: one list request and one selected detail
-request. A custom boundary is roughly one small file and makes the cancellation,
-timeout, and cache behavior visible to a reviewer. TanStack Query would be a
-good choice if the product added mutations, dependent query trees, background
-revalidation, or multiple screens sharing server state.
+Rejected because a portfolio deployment should not knowingly depend on a dead provider.
 
-## Why no router?
+### PokéAPI rewrite
 
-There is only one screen and two URL parameters. Native History + URLSearchParams
-fully satisfy navigation, shareability, refresh, and Back/Forward behavior.
-Adding route objects would create more surface without a product capability.
+Technically strong, but it discards the repository's Marvel identity and creates a more common portfolio category. Reading Atlas gives the project a more distinctive product story.
 
-## Accessibility
+### Add a server proxy
 
-The interface uses:
+The active metadata API requires no authentication and its source explicitly permits browser GET CORS. A proxy would add hosting, failure modes and code without protecting a secret or adding product value.
 
-- one page `h1` and ordered heading levels;
-- native search input and buttons;
-- explicit labels and action names;
-- `aria-pressed` for selected/saved toggles;
-- skip navigation and visible focus;
-- loading/status announcements where useful;
-- reduced-motion handling;
-- forced-colors fallbacks;
-- axe browser verification.
+### Redux / Zustand
 
-## Testing pyramid
+The state graph is small and feature-local. React state plus pure storage transitions is sufficient.
 
-```text
-Playwright + axe
-      /\
-     /  \
-React/build/lint quality gate
-   /      \
-pure domain + storage unit tests
-```
+### React Router
 
-The browser suite mocks the Marvel API so CI is deterministic and does not
-consume API quota or depend on upstream availability.
+There are three URL fields and no nested route tree. Native History and URLSearchParams keep the bundle and mental model smaller.
 
+### TanStack Query
 
-## Hardening notes
+The request surface is small and the project intentionally demonstrates explicit cancellation/cache semantics. Adding a query library would cost more concepts than it removes here.
 
-### Saved and Recent are product views
+### Persist raw provider payloads
 
-Favorites and recent history are no longer write-only counters. The URL now
-supports `view=saved` and `view=recent`, and those collections are hydrated
-through the same API boundary as discovery. Only ids are persisted, which keeps
-local storage small and avoids persisting stale Marvel payloads.
-
-A directly opened `?character=<id>` link is recorded as recently viewed only
-after the character request succeeds. That makes the domain meaning
-"successfully viewed", not merely "clicked".
-
-### Retry state
-
-Initial-load retry and pagination retry are separate transitions. An initial
-network failure cannot temporarily render the semantic "0 matches" state, and a
-pagination failure preserves existing cards while allowing a real retry.
-
-### Bounded response cache
-
-The API cache combines:
-
-- 5-minute TTL;
-- 50-entry maximum;
-- recency refresh on cache reads;
-- oldest-entry eviction at capacity.
-
-The cache is an optimization only. It never becomes durable application state.
-
-### Cross-browser verification
-
-The deterministic Playwright suite runs on Chromium, Firefox, WebKit, and a
-mobile Chromium profile. A separate scheduled smoke checks the real Marvel API
-contract without making pull-request CI depend on upstream uptime.
-
-### Styling boundaries
-
-The previous monolithic stylesheet is split by responsibility: reset, tokens,
-base, header/hero, search, layout, character cards, detail, feedback states, and
-responsive behavior. Cascade layers preserve explicit ordering without a CSS
-framework.
-
-
-## Browser Marvel API boundary
-
-Marvel Atlas has no backend requirement. Local development, Vercel, and GitHub
-Pages therefore use the same browser path:
-
-```text
-Browser
-  |
-  +--> gateway.marvel.com/v1/public
-          |
-          +--> public API key
-          +--> characters
-          +--> characters/:id
-          +--> characters/:id/comics
-```
-
-Only Marvel's public browser credential is used. The public key is intentionally
-client-visible; a Marvel private key is neither required nor accepted anywhere
-in the application.
-
-This removes a serverless hop, eliminates deployment-specific secret management,
-and keeps the network boundary identical across hosting providers. If browser
-referrer restrictions are enabled in the Marvel developer account, deployed
-origins must be added to that account's allowlist.
+Rejected because provider response shape is infrastructure, not product state. Storage keeps normalized snapshots only.
