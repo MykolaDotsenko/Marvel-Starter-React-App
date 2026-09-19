@@ -1,12 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Icon } from "./Icon.jsx";
 
 export const CompactSearch = ({ activeQuery, onSubmit }) => {
   const [value, setValue] = useState(activeQuery);
 
-  useEffect(() => {
-    setValue(activeQuery);
-  }, [activeQuery]);
 
   const submit = (event) => {
     event.preventDefault();

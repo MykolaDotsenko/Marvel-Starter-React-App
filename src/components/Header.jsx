@@ -35,7 +35,7 @@ export const Header = ({
       </button>
 
       {showCompactSearch ? (
-        <CompactSearch activeQuery={activeQuery} onSubmit={onSearch} />
+        <CompactSearch key={activeQuery} activeQuery={activeQuery} onSubmit={onSearch} />
       ) : null}
 
       <nav className="site-nav" aria-label="Reading Atlas views">
