@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const mobileChromium = devices["Pixel 7"];
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
@@ -17,6 +19,17 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
-    { name: "mobile-chromium", use: { ...devices["Pixel 7"] } },
+    {
+      name: "mobile-360",
+      use: { ...mobileChromium, viewport: { width: 360, height: 800 } },
+    },
+    {
+      name: "mobile-390",
+      use: { ...mobileChromium, viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: "mobile-440",
+      use: { ...mobileChromium, viewport: { width: 440, height: 956 } },
+    },
   ],
 });
