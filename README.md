@@ -36,7 +36,7 @@ Marvel Atlas turns an early Create React App training project into a focused pro
 - native History / URLSearchParams
 - Web Storage API
 - Fetch API + AbortController
-- Marvel public API
+- Marvel public API through a same-origin Vercel Function in production
 
 There is **no runtime state library, router, UI kit, animation package, or API client dependency**.
 
@@ -194,7 +194,16 @@ VITE_MARVEL_PUBLIC_KEY=your_public_marvel_key
 
 Marvel's browser integration uses a public key. **Never expose the Marvel private key in a Vite variable or client-side bundle.**
 
-The repository keeps the original public demo key as a fallback so the existing deployment remains usable after migration.
+Local Vite development may call Marvel directly with the public key. Production does **not** depend on browser referrer authentication: it calls the same-origin `/api/marvel` Vercel Function, which signs Marvel requests server-side.
+
+Configure these server-only Vercel Environment Variables for Preview and Production:
+
+```text
+MARVEL_PUBLIC_KEY=your_public_marvel_key
+MARVEL_PRIVATE_KEY=your_private_marvel_key
+```
+
+Never prefix the private key with `VITE_`; Vite variables are client-visible.
 
 ## Quality gates
 
@@ -316,3 +325,18 @@ Recommended GitHub metadata for this repository:
 
 `react` · `react-19` · `vite` · `marvel-api` · `frontend` ·
 `playwright` · `vitest` · `accessibility` · `javascript` · `portfolio`
+
+
+## Production API boundary
+
+Browser requests in production go to `/api/marvel`, not directly to
+`gateway.marvel.com`. The Vercel Function:
+
+- accepts only the exact character endpoints used by Marvel Atlas;
+- whitelists supported query parameters instead of acting as an open proxy;
+- generates Marvel's required `ts + MD5(ts + privateKey + publicKey)` server-side authentication;
+- keeps the private key out of the browser bundle and Git history;
+- applies a short CDN cache to successful upstream responses;
+- turns missing credentials, upstream failures, and timeouts into structured JSON errors.
+
+This removes production dependence on Marvel's browser referrer allowlist.
