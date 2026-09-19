@@ -26,5 +26,7 @@
     --radius-md: 18px;
     --radius-lg: 26px;
     --page: min(1480px, calc(100% - 40px));
+    --touch-target: 44px;
+    --mobile-nav-height: 72px;
   }
 }

@@ -119,6 +119,110 @@ test.beforeEach(async ({ page }) => {
 });
 
 
+
+test("phone UI uses app navigation, compact cards and minimum touch targets", async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width > 700, "Phone-only layout contract");
+
+  await page.goto("/");
+
+  const desktopNav = page.getByRole("navigation", { name: "Reading Atlas views" });
+  const mobileNav = page.getByRole("navigation", { name: "Mobile Reading Atlas views" });
+
+  await expect(desktopNav).toBeHidden();
+  await expect(mobileNav).toBeVisible();
+
+  const firstCard = page.locator(".issue-card").first();
+  await expect(firstCard).toBeVisible();
+
+  const cardBox = await firstCard.boundingBox();
+  expect(cardBox?.height).toBeGreaterThanOrEqual(140);
+  expect(cardBox?.height).toBeLessThanOrEqual(175);
+
+  const cardActions = firstCard.locator(".card-action");
+  for (let index = 0; index < await cardActions.count(); index += 1) {
+    const box = await cardActions.nth(index).boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  }
+
+  const navButtons = mobileNav.getByRole("button");
+  for (let index = 0; index < await navButtons.count(); index += 1) {
+    const box = await navButtons.nth(index).boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  }
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(overflow).toBe(false);
+});
+
+test("phone search stays one-line and quick routes scroll horizontally", async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width > 700, "Phone-only layout contract");
+
+  await page.goto("/");
+
+  const shell = page.locator(".search-shell");
+  const input = page.getByLabel("Search Marvel comics");
+  const submit = page.getByRole("button", { name: "Search", exact: true });
+
+  const [shellBox, inputBox, submitBox] = await Promise.all([
+    shell.boundingBox(),
+    input.boundingBox(),
+    submit.boundingBox(),
+  ]);
+
+  expect(Math.abs((inputBox?.y ?? 0) - (submitBox?.y ?? 0))).toBeLessThan(10);
+  expect(shellBox?.height).toBeLessThanOrEqual(62);
+  expect(submitBox?.width).toBeGreaterThanOrEqual(44);
+  expect(submitBox?.height).toBeGreaterThanOrEqual(44);
+
+  const quick = page.locator(".quick-searches");
+  const quickStyles = await quick.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      overflowX: style.overflowX,
+      flexWrap: style.flexWrap,
+    };
+  });
+
+  expect(["auto", "scroll"]).toContain(quickStyles.overflowX);
+  expect(quickStyles.flexWrap).toBe("nowrap");
+});
+
+test("phone dossier opens as a fullscreen layer and closes back to discovery", async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width > 700, "Phone-only layout contract");
+
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: `Open issue details for ${secretWars.title}` })
+    .click();
+
+  await expect(page).toHaveURL(/issue=52447/);
+
+  const rail = page.locator(".detail-rail--open");
+  await expect(rail).toBeVisible();
+
+  const railBox = await rail.boundingBox();
+  expect(railBox?.width).toBeGreaterThanOrEqual(viewport.width - 1);
+  expect(railBox?.height).toBeGreaterThanOrEqual(viewport.height - 1);
+
+  const bodyOverflow = await page.evaluate(() => getComputedStyle(document.body).overflow);
+  expect(bodyOverflow).toBe("hidden");
+
+  const close = page.getByRole("button", { name: /Close/ });
+  const closeBox = await close.boundingBox();
+  expect(closeBox?.height).toBeGreaterThanOrEqual(44);
+
+  await close.click();
+  await expect(page).not.toHaveURL(/issue=/);
+  await expect(page.locator(".detail-rail--open")).toHaveCount(0);
+  await expect(page.locator(".issue-grid")).toBeVisible();
+});
+
 test("editorial hero composes a route and promotes search into the sticky header", async ({ page }) => {
   await page.goto("/");
 
