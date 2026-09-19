@@ -5,11 +5,10 @@ import {
   sanitizeSearchTerm,
 } from "../domain/marvel.js";
 
-const DIRECT_API_BASE = "https://gateway.marvel.com/v1/public";
+const API_BASE = "https://gateway.marvel.com/v1/public";
 const PUBLIC_KEY =
-  import.meta.env.VITE_MARVEL_PUBLIC_KEY ||
+  import.meta.env.VITE_MARVEL_PUBLIC_KEY?.trim() ||
   "6f00fba70811bdd9daa3cf27662d5b52";
-const PROXY_ORIGIN = import.meta.env.VITE_MARVEL_PROXY_ORIGIN?.trim() || null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 50;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -72,82 +71,43 @@ const createRequestSignal = (externalSignal) => {
   };
 };
 
-const appendParams = (url, params) => {
+const buildUrl = (pathname, params) => {
+  const url = new URL(`${API_BASE}/${pathname}`);
+  url.searchParams.set("apikey", PUBLIC_KEY);
+
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
       url.searchParams.set(key, String(value));
     }
   });
+
   return url;
 };
 
-const buildProxyUrl = (pathname, params) => {
-  const url = new URL("/api/marvel", PROXY_ORIGIN || window.location.origin);
-  url.searchParams.set("path", pathname);
-  return appendParams(url, params);
-};
-
-const buildDirectUrl = (pathname, params) => {
-  const url = new URL(`${DIRECT_API_BASE}/${pathname}`);
-  url.searchParams.set("apikey", PUBLIC_KEY);
-  return appendParams(url, params);
-};
-
-const parseResponse = async (response) => {
-  const payload = await response.json().catch(() => null);
-  return { response, payload };
-};
-
-const errorMessage = ({ response, payload }) =>
-  payload?.message ||
-  payload?.status ||
-  `Marvel API request failed with status ${response.status}.`;
-
-const fetchPayload = async (url, signal) =>
-  parseResponse(
-    await fetch(url, {
-      signal,
-      headers: { Accept: "application/json" },
-    }),
-  );
-
 const request = async (pathname, params = {}, externalSignal) => {
-  const productionProxy = import.meta.env.PROD;
-  const primaryUrl = productionProxy
-    ? buildProxyUrl(pathname, params)
-    : buildDirectUrl(pathname, params);
-
-  const cacheKey = primaryUrl.toString();
+  const url = buildUrl(pathname, params);
+  const cacheKey = url.toString();
   const cached = readCache(cacheKey);
   if (cached) return cached;
 
   const requestSignal = createRequestSignal(externalSignal);
 
   try {
-    let result = await fetchPayload(primaryUrl, requestSignal.signal);
+    const response = await fetch(url, {
+      signal: requestSignal.signal,
+      headers: { Accept: "application/json" },
+    });
+    const payload = await response.json().catch(() => null);
 
-    if (
-      productionProxy &&
-      result.response.status === 503 &&
-      result.payload?.error === "MARVEL_PROXY_UNCONFIGURED"
-    ) {
-      try {
-        result = await fetchPayload(
-          buildDirectUrl(pathname, params),
-          requestSignal.signal,
-        );
-      } catch {
-        throw new Error(
-          "Marvel API credentials are not configured for this deployment, and the browser fallback was blocked. Configure MARVEL_PUBLIC_KEY and MARVEL_PRIVATE_KEY in Vercel.",
-        );
-      }
+    if (!response.ok) {
+      throw new Error(
+        payload?.message ||
+          payload?.status ||
+          `Marvel API request failed with status ${response.status}.`,
+      );
     }
 
-    if (!result.response.ok) {
-      throw new Error(errorMessage(result));
-    }
-
-    const results = result.payload?.data?.results;
+    const results = payload?.data?.results;
 
     if (!Array.isArray(results)) {
       throw new TypeError("Marvel API returned an unexpected payload.");

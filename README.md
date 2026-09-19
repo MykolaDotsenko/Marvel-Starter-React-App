@@ -36,7 +36,7 @@ Marvel Atlas turns an early Create React App training project into a focused pro
 - native History / URLSearchParams
 - Web Storage API
 - Fetch API + AbortController
-- Marvel public API through a same-origin Vercel Function in production
+- Marvel public API called directly from the browser with a public API key
 
 There is **no runtime state library, router, UI kit, animation package, or API client dependency**.
 
@@ -192,18 +192,18 @@ Then set:
 VITE_MARVEL_PUBLIC_KEY=your_public_marvel_key
 ```
 
-Marvel's browser integration uses a public key. **Never expose the Marvel private key in a Vite variable or client-side bundle.**
+Marvel Atlas intentionally uses Marvel's browser integration: the **public key is client-visible** and requests go directly to `gateway.marvel.com` in local, Vercel, and GitHub Pages builds.
 
-Local Vite development may call Marvel directly with the public key. Production does **not** depend on browser referrer authentication: it calls the same-origin `/api/marvel` Vercel Function, which signs Marvel requests server-side.
+No Marvel private key is required by this project. Do not add a private key to Vite variables, GitHub Pages, source code, or the browser bundle.
 
-Configure these server-only Vercel Environment Variables for Preview and Production:
+If the Marvel developer account restricts browser referrers, allow the deployed origins used by this repository, including:
 
 ```text
-MARVEL_PUBLIC_KEY=your_public_marvel_key
-MARVEL_PRIVATE_KEY=your_private_marvel_key
+https://marvel-starter-phi.vercel.app
+https://mykoladotsenko.github.io
 ```
 
-Never prefix the private key with `VITE_`; Vite variables are client-visible.
+The checked-in demo public key can be overridden with `VITE_MARVEL_PUBLIC_KEY` when a different public key is desired.
 
 ## Quality gates
 
@@ -327,16 +327,21 @@ Recommended GitHub metadata for this repository:
 `playwright` · `vitest` · `accessibility` · `javascript` · `portfolio`
 
 
-## Production API boundary
+## Browser API boundary
 
-Browser requests in production go to `/api/marvel`, not directly to
-`gateway.marvel.com`. The Vercel Function:
+Marvel Atlas is intentionally backend-free. The browser calls the public Marvel catalog directly:
 
-- accepts only the exact character endpoints used by Marvel Atlas;
-- whitelists supported query parameters instead of acting as an open proxy;
-- generates Marvel's required `ts + MD5(ts + privateKey + publicKey)` server-side authentication;
-- keeps the private key out of the browser bundle and Git history;
-- applies a short CDN cache to successful upstream responses;
-- turns missing credentials, upstream failures, and timeouts into structured JSON errors.
+```text
+Browser
+  |
+  +--> gateway.marvel.com/v1/public
+          |
+          +--> public API key
+          +--> bounded query parameters
+          +--> 10s client timeout
+          +--> 5-minute / 50-entry in-memory cache
+```
 
-This removes production dependence on Marvel's browser referrer allowlist.
+The public key is expected to be visible in a client-side application. No private Marvel credential is stored or required.
+
+This keeps the portfolio deployment portable across Vercel and GitHub Pages and removes an unnecessary serverless hop. Browser-domain authorization, when enabled for the Marvel developer account, is the deployment-level access control.

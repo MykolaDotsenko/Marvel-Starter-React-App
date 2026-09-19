@@ -17,7 +17,6 @@ concurrency:
 
 env:
   VITE_BASE_PATH: /Marvel-Starter-React-App/
-  VITE_MARVEL_PROXY_ORIGIN: https://marvel-starter-phi.vercel.app
 
 jobs:
   build:
@@ -42,7 +41,8 @@ jobs:
       - name: Verify GitHub Pages build contract
         run: |
           grep -q '/Marvel-Starter-React-App/assets/' dist/index.html
-          grep -R -q 'https://marvel-starter-phi.vercel.app' dist/assets
+          grep -R -q 'https://gateway.marvel.com/v1/public' dist/assets
+          ! grep -R -q '/api/marvel' dist/assets
 
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request'
