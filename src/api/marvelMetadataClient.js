@@ -1,14 +1,14 @@
 import {
-  CHARACTER_PAGE_SIZE,
-  normalizeCharacter,
-  normalizeComic,
+  ISSUE_PAGE_SIZE,
+  SEARCH_LIMIT,
+  normalizeIssueDetail,
+  normalizeIssueSummary,
   sanitizeSearchTerm,
-} from "../domain/marvel.js";
+} from "../domain/reading.js";
 
-const API_BASE = "https://gateway.marvel.com/v1/public";
-const PUBLIC_KEY =
-  import.meta.env.VITE_MARVEL_PUBLIC_KEY?.trim() ||
-  "6f00fba70811bdd9daa3cf27662d5b52";
+const API_BASE =
+  import.meta.env.VITE_MARVEL_METADATA_API?.trim() ||
+  "https://marvel.emreparker.com/v1";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 50;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -30,9 +30,7 @@ const readCache = (key) => {
 };
 
 const writeCache = (key, value) => {
-  if (responseCache.has(key)) {
-    responseCache.delete(key);
-  }
+  if (responseCache.has(key)) responseCache.delete(key);
 
   while (responseCache.size >= MAX_CACHE_ENTRIES) {
     const oldestKey = responseCache.keys().next().value;
@@ -71,9 +69,8 @@ const createRequestSignal = (externalSignal) => {
   };
 };
 
-const buildUrl = (pathname, params) => {
+const buildUrl = (pathname, params = {}) => {
   const url = new URL(`${API_BASE}/${pathname}`);
-  url.searchParams.set("apikey", PUBLIC_KEY);
 
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -100,21 +97,19 @@ const request = async (pathname, params = {}, externalSignal) => {
     const payload = await response.json().catch(() => null);
 
     if (!response.ok) {
-      throw new Error(
-        payload?.message ||
-          payload?.status ||
-          `Marvel API request failed with status ${response.status}.`,
-      );
+      const message =
+        typeof payload?.detail === "string" && payload.detail.trim()
+          ? payload.detail.trim()
+          : `Marvel metadata request failed with status ${response.status}.`;
+      throw new Error(message);
     }
 
-    const results = payload?.data?.results;
-
-    if (!Array.isArray(results)) {
-      throw new TypeError("Marvel API returned an unexpected payload.");
+    if (!payload || typeof payload !== "object") {
+      throw new TypeError("Marvel metadata API returned an unexpected payload.");
     }
 
-    writeCache(cacheKey, results);
-    return results;
+    writeCache(cacheKey, payload);
+    return payload;
   } finally {
     requestSignal.cleanup();
   }
@@ -123,67 +118,68 @@ const request = async (pathname, params = {}, externalSignal) => {
 const normalizeId = (id) => {
   const value = Number(id);
   if (!Number.isInteger(value) || value <= 0) {
-    throw new TypeError("Character id must be a positive integer.");
+    throw new TypeError("Issue id must be a positive integer.");
   }
   return value;
 };
 
-export const listCharacters = async ({
-  query = "",
+const normalizeList = (items) =>
+  Array.isArray(items)
+    ? items
+        .map((item) => {
+          try {
+            return normalizeIssueSummary(item);
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean)
+    : [];
+
+export const listIssues = async ({
   offset = 0,
-  limit = CHARACTER_PAGE_SIZE,
+  limit = ISSUE_PAGE_SIZE,
   signal,
 } = {}) => {
-  const normalizedQuery = sanitizeSearchTerm(query);
-  const results = await request(
-    "characters",
-    {
-      limit,
-      offset,
-      orderBy: "name",
-      ...(normalizedQuery ? { nameStartsWith: normalizedQuery } : {}),
-    },
-    signal,
-  );
+  const payload = await request("issues", { offset, limit }, signal);
+  const items = normalizeList(payload.items);
 
-  return results.map(normalizeCharacter);
+  return {
+    items,
+    total: Number.isInteger(payload.total) ? payload.total : items.length,
+    hasNext: Boolean(payload.has_next),
+  };
 };
 
-export const getCharacter = async (id, { signal } = {}) => {
-  const characterId = normalizeId(id);
-  const results = await request(`characters/${characterId}`, {}, signal);
+export const searchIssues = async (
+  query,
+  { limit = SEARCH_LIMIT, signal } = {},
+) => {
+  const normalizedQuery = sanitizeSearchTerm(query);
 
-  if (!results[0]) {
-    throw new Error("Character was not found.");
+  if (normalizedQuery.length < 2) {
+    return { items: [], total: 0, hasNext: false };
   }
 
-  return normalizeCharacter(results[0]);
-};
-
-export const getCharacterComics = async (id, { signal, limit = 8 } = {}) => {
-  const characterId = normalizeId(id);
-  const results = await request(
-    `characters/${characterId}/comics`,
-    {
-      limit,
-      orderBy: "-onsaleDate",
-      formatType: "comic",
-      noVariants: true,
-    },
+  const payload = await request(
+    "search/issues",
+    { q: normalizedQuery, limit },
     signal,
   );
+  const items = normalizeList(payload.items);
 
-  return results
-    .map((comic) => {
-      try {
-        return normalizeComic(comic);
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean);
+  return {
+    items,
+    total: Number.isInteger(payload.count) ? payload.count : items.length,
+    hasNext: false,
+  };
 };
 
-export const clearMarvelCache = () => responseCache.clear();
+export const getIssue = async (id, { signal } = {}) => {
+  const issueId = normalizeId(id);
+  const payload = await request(`issues/${issueId}`, {}, signal);
+  return normalizeIssueDetail(payload);
+};
 
-export const getMarvelCacheSize = () => responseCache.size;
+export const clearMetadataCache = () => responseCache.clear();
+export const getMetadataCacheSize = () => responseCache.size;

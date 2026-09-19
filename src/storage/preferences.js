@@ -1,25 +1,64 @@
 import {
-  FAVORITES_LIMIT,
+  READING_LIST_LIMIT,
   RECENT_LIMIT,
-  pushRecent,
-  toggleId,
-} from "../domain/marvel.js";
+  SAVED_LIMIT,
+  normalizeIssueSummary,
+  toIssueSnapshot,
+} from "../domain/reading.js";
 
-const STORAGE_KEY = "marvel-atlas:preferences:v1";
+const STORAGE_KEY = "marvel-reading-atlas:library:v1";
 
-const normalizeIds = (value, limit) =>
-  Array.isArray(value)
-    ? [...new Set(value.filter(Number.isInteger))].slice(0, limit)
-    : [];
+const normalizeSnapshot = (value) => {
+  try {
+    return normalizeIssueSummary(value);
+  } catch {
+    return null;
+  }
+};
+
+const normalizeIssueArray = (value, limit) => {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set();
+  const result = [];
+
+  for (const raw of value) {
+    const issue = normalizeSnapshot(raw);
+    if (!issue || seen.has(issue.id)) continue;
+    seen.add(issue.id);
+    result.push(issue);
+    if (result.length >= limit) break;
+  }
+
+  return result;
+};
+
+const normalizeReadingList = (value) => {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set();
+  const result = [];
+
+  for (const raw of value) {
+    const issue = normalizeSnapshot(raw?.issue);
+    if (!issue || seen.has(issue.id)) continue;
+    seen.add(issue.id);
+    result.push({ issue, read: Boolean(raw.read) });
+    if (result.length >= READING_LIST_LIMIT) break;
+  }
+
+  return result;
+};
 
 export const parsePreferences = (value) => {
   if (!value || typeof value !== "object") {
-    return { favorites: [], recent: [] };
+    return { saved: [], recent: [], readingList: [] };
   }
 
   return {
-    favorites: normalizeIds(value.favorites, FAVORITES_LIMIT),
-    recent: normalizeIds(value.recent, RECENT_LIMIT),
+    saved: normalizeIssueArray(value.saved, SAVED_LIMIT),
+    recent: normalizeIssueArray(value.recent, RECENT_LIMIT),
+    readingList: normalizeReadingList(value.readingList),
   };
 };
 
@@ -38,22 +77,82 @@ export const savePreferences = (preferences, storage = window.localStorage) => {
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(normalized));
   } catch {
-    // Local persistence is an enhancement. Browsing remains fully functional.
+    // Local persistence is progressive enhancement; discovery still works.
   }
 
   return normalized;
 };
 
-export const toggleFavorite = (preferences, id) => ({
-  ...preferences,
-  favorites: toggleId(preferences.favorites, id),
-});
-
-export const rememberCharacter = (preferences, id) => {
-  if (preferences.recent[0] === id) return preferences;
+export const toggleSaved = (preferences, issue) => {
+  const snapshot = toIssueSnapshot(issue);
+  const exists = preferences.saved.some((item) => item.id === snapshot.id);
 
   return {
     ...preferences,
-    recent: pushRecent(preferences.recent, id),
+    saved: exists
+      ? preferences.saved.filter((item) => item.id !== snapshot.id)
+      : [snapshot, ...preferences.saved].slice(0, SAVED_LIMIT),
   };
+};
+
+export const rememberIssue = (preferences, issue) => {
+  const snapshot = toIssueSnapshot(issue);
+
+  if (preferences.recent[0]?.id === snapshot.id) return preferences;
+
+  return {
+    ...preferences,
+    recent: [
+      snapshot,
+      ...preferences.recent.filter((item) => item.id !== snapshot.id),
+    ].slice(0, RECENT_LIMIT),
+  };
+};
+
+export const toggleReadingItem = (preferences, issue) => {
+  const snapshot = toIssueSnapshot(issue);
+  const exists = preferences.readingList.some(
+    (item) => item.issue.id === snapshot.id,
+  );
+
+  return {
+    ...preferences,
+    readingList: exists
+      ? preferences.readingList.filter((item) => item.issue.id !== snapshot.id)
+      : [...preferences.readingList, { issue: snapshot, read: false }].slice(
+          0,
+          READING_LIST_LIMIT,
+        ),
+  };
+};
+
+export const setReadingStatus = (preferences, issueId, read) => ({
+  ...preferences,
+  readingList: preferences.readingList.map((item) =>
+    item.issue.id === issueId ? { ...item, read: Boolean(read) } : item,
+  ),
+});
+
+export const moveReadingItem = (preferences, issueId, direction) => {
+  const index = preferences.readingList.findIndex(
+    (item) => item.issue.id === issueId,
+  );
+  const target = index + direction;
+
+  if (
+    index < 0 ||
+    target < 0 ||
+    target >= preferences.readingList.length ||
+    ![-1, 1].includes(direction)
+  ) {
+    return preferences;
+  }
+
+  const readingList = [...preferences.readingList];
+  [readingList[index], readingList[target]] = [
+    readingList[target],
+    readingList[index],
+  ];
+
+  return { ...preferences, readingList };
 };

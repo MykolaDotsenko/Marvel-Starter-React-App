@@ -5,44 +5,50 @@ import {
   useMemo,
   useState,
 } from "react";
-import { CharacterDetail } from "../components/CharacterDetail.jsx";
-import { CharacterGrid } from "../components/CharacterGrid.jsx";
 import { Header } from "../components/Header.jsx";
+import { IssueDetail } from "../components/IssueDetail.jsx";
+import { IssueGrid } from "../components/IssueGrid.jsx";
+import { ReadingListPanel } from "../components/ReadingListPanel.jsx";
 import { SearchPanel } from "../components/SearchPanel.jsx";
-import { useCharacterCollection } from "../hooks/useCharacterCollection.js";
-import { useCharacterDetails } from "../hooks/useCharacterDetails.js";
-import { useCharacterList } from "../hooks/useCharacterList.js";
+import { useIssueDetails } from "../hooks/useIssueDetails.js";
+import { useIssueList } from "../hooks/useIssueList.js";
 import { useUrlState } from "../hooks/useUrlState.js";
 import {
   loadPreferences,
-  rememberCharacter,
+  moveReadingItem,
+  rememberIssue,
   savePreferences,
-  toggleFavorite,
+  setReadingStatus,
+  toggleReadingItem,
+  toggleSaved,
 } from "../storage/preferences.js";
 
-const quickSearches = ["Spider", "Iron", "Black", "Captain", "Thor"];
+const quickSearches = ["Secret Wars", "Avengers", "X-Men", "Spider-Man", "Daredevil"];
 
 const viewCopy = {
   explore: {
     eyebrow: "Discovery queue",
-    title: "Browse characters",
-    emptyTitle: "No characters matched this prefix.",
-    emptyDescription:
-      "Try a shorter name or one of the quick-search prompts above.",
+    title: "Latest indexed issues",
+    emptyTitle: "No issues matched this search.",
+    emptyDescription: "Try a broader title or one of the quick searches above.",
   },
   saved: {
     eyebrow: "Local shortlist",
-    title: "Saved characters",
-    emptyTitle: "Your shortlist is empty.",
-    emptyDescription:
-      "Save useful characters from Explore or a dossier and they will appear here.",
+    title: "Saved issues",
+    emptyTitle: "Your saved shelf is empty.",
+    emptyDescription: "Save useful issues from Explore or a dossier and they will stay here.",
+  },
+  reading: {
+    eyebrow: "Personal journey",
+    title: "Reading list",
+    emptyTitle: "",
+    emptyDescription: "",
   },
   recent: {
     eyebrow: "Local history",
     title: "Recently viewed",
-    emptyTitle: "No recent characters yet.",
-    emptyDescription:
-      "Open a character dossier and it will appear here automatically.",
+    emptyTitle: "No recent issues yet.",
+    emptyDescription: "Open an issue dossier and it will appear here automatically.",
   },
 };
 
@@ -50,67 +56,75 @@ const App = () => {
   const [urlState, setUrlState] = useUrlState();
   const [preferences, setPreferences] = useState(loadPreferences);
 
-  const rememberViewedCharacter = useCallback((character) => {
-    setPreferences((current) => rememberCharacter(current, character.id));
+  const rememberViewedIssue = useCallback((issue) => {
+    setPreferences((current) => rememberIssue(current, issue));
   }, []);
 
-  const characters = useCharacterList(urlState.query);
-  const detail = useCharacterDetails(urlState.characterId, {
-    onLoaded: rememberViewedCharacter,
+  const issues = useIssueList(urlState.query);
+  const detail = useIssueDetails(urlState.issueId, {
+    onLoaded: rememberViewedIssue,
   });
-  const savedCharacters = useCharacterCollection(preferences.favorites);
-  const recentCharacters = useCharacterCollection(preferences.recent);
 
   useEffect(() => {
     savePreferences(preferences);
   }, [preferences]);
 
-  const favoriteSet = useMemo(
-    () => new Set(preferences.favorites),
-    [preferences.favorites],
+  const savedIds = useMemo(
+    () => new Set(preferences.saved.map((issue) => issue.id)),
+    [preferences.saved],
+  );
+  const readingIds = useMemo(
+    () => new Set(preferences.readingList.map((item) => item.issue.id)),
+    [preferences.readingList],
   );
 
   const submitSearch = (query) => {
     startTransition(() => {
-      setUrlState({ query, characterId: null, view: "explore" });
+      setUrlState({ query, issueId: null, view: "explore" });
     });
   };
 
-  const selectCharacter = (characterId) => {
-    startTransition(() => {
-      setUrlState({ characterId });
-    });
+  const selectIssue = (issueId) => {
+    startTransition(() => setUrlState({ issueId }));
   };
 
   const changeView = (view) => {
-    startTransition(() => {
-      setUrlState({ view });
-    });
+    startTransition(() => setUrlState({ view }));
   };
 
-  const toggleSelectedFavorite = (characterId) => {
-    setPreferences((current) => toggleFavorite(current, characterId));
-  };
-
-  const activeCollection =
+  const activeIssues =
     urlState.view === "saved"
-      ? savedCharacters
+      ? preferences.saved
       : urlState.view === "recent"
-        ? recentCharacters
-        : characters;
+        ? preferences.recent
+        : issues.items;
 
   const copy = viewCopy[urlState.view];
   const isExplore = urlState.view === "explore";
+  const isReading = urlState.view === "reading";
   const title =
     isExplore && urlState.query
-      ? `Characters starting with “${urlState.query}”`
+      ? `Issues matching “${urlState.query}”`
       : copy.title;
+
+  const selectedReadingEntry = urlState.issueId
+    ? preferences.readingList.find((item) => item.issue.id === urlState.issueId)
+    : null;
+
+  const meta = isReading
+    ? `${preferences.readingList.length} queued`
+    : isExplore && issues.loading
+      ? "Loading issues…"
+      : isExplore && issues.total
+        ? `${activeIssues.length} shown · ${issues.total.toLocaleString()} matched`
+        : `${activeIssues.length} shown`;
 
   return (
     <div className="app-shell">
       <Header
         activeView={urlState.view}
-        favoriteCount={preferences.favorites.length}
+        savedCount={preferences.saved.length}
+        readingCount={preferences.readingList.length}
         recentCount={preferences.recent.length}
         onViewChange={changeView}
       />
@@ -118,29 +132,21 @@ const App = () => {
       <main id="main-content">
         <section className="hero" aria-labelledby="hero-title">
           <div className="hero__copy">
-            <p className="eyebrow">Marvel Atlas / character intelligence</p>
+            <p className="eyebrow">Marvel Reading Atlas / reading intelligence</p>
             <h1 id="hero-title">
-              Explore the Marvel universe without losing the signal.
+              Turn Marvel discovery into a reading plan you can finish.
             </h1>
             <p className="hero__lede">
-              Search characters, inspect their latest comics, keep a local
-              shortlist, and share the exact discovery state through the URL.
+              Search tens of thousands of issues, inspect creator and series
+              metadata, build an ordered reading journey, and track progress
+              locally with no account.
             </p>
           </div>
 
           <div className="hero__metrics" aria-label="Product capabilities">
-            <div>
-              <strong>10s</strong>
-              <span>bounded API timeout</span>
-            </div>
-            <div>
-              <strong>50</strong>
-              <span>bounded cache entries</span>
-            </div>
-            <div>
-              <strong>0</strong>
-              <span>runtime UI libraries</span>
-            </div>
+            <div><strong>37.5k+</strong><span>indexed comic issues</span></div>
+            <div><strong>200</strong><span>bounded reading-list items</span></div>
+            <div><strong>0</strong><span>auth or runtime UI libraries</span></div>
           </div>
         </section>
 
@@ -158,46 +164,69 @@ const App = () => {
                 <p className="eyebrow">{copy.eyebrow}</p>
                 <h2 id="explorer-title">{title}</h2>
               </div>
-              <p className="section-heading__meta" aria-live="polite">
-                {activeCollection.loading
-                  ? "Loading characters…"
-                  : `${activeCollection.items.length} loaded`}
-              </p>
+              <p className="section-heading__meta" aria-live="polite">{meta}</p>
             </div>
 
-            <CharacterGrid
-              characters={activeCollection.items}
-              selectedId={urlState.characterId}
-              favorites={favoriteSet}
-              loading={activeCollection.loading}
-              loadingMore={isExplore ? characters.loadingMore : false}
-              error={activeCollection.error}
-              ended={isExplore ? characters.ended : true}
-              onSelect={selectCharacter}
-              onFavorite={toggleSelectedFavorite}
-              onLoadMore={isExplore ? characters.loadMore : undefined}
-              onRetryInitial={isExplore ? characters.retryInitial : undefined}
-              showPagination={isExplore}
-              emptyTitle={copy.emptyTitle}
-              emptyDescription={copy.emptyDescription}
-            />
+            {isReading ? (
+              <ReadingListPanel
+                items={preferences.readingList}
+                selectedId={urlState.issueId}
+                onOpen={selectIssue}
+                onMarkRead={(issueId, read) =>
+                  setPreferences((current) => setReadingStatus(current, issueId, read))
+                }
+                onMove={(issueId, direction) =>
+                  setPreferences((current) => moveReadingItem(current, issueId, direction))
+                }
+                onRemove={(issue) =>
+                  setPreferences((current) => toggleReadingItem(current, issue))
+                }
+              />
+            ) : (
+              <IssueGrid
+                issues={activeIssues}
+                selectedId={urlState.issueId}
+                savedIds={savedIds}
+                readingIds={readingIds}
+                loading={isExplore ? issues.loading : false}
+                loadingMore={isExplore ? issues.loadingMore : false}
+                error={isExplore ? issues.error : null}
+                ended={isExplore ? issues.ended : true}
+                onSelect={selectIssue}
+                onSaved={(issue) =>
+                  setPreferences((current) => toggleSaved(current, issue))
+                }
+                onReading={(issue) =>
+                  setPreferences((current) => toggleReadingItem(current, issue))
+                }
+                onLoadMore={isExplore ? issues.loadMore : undefined}
+                onRetryInitial={isExplore ? issues.retryInitial : undefined}
+                showPagination={isExplore && !urlState.query}
+                emptyTitle={copy.emptyTitle}
+                emptyDescription={copy.emptyDescription}
+              />
+            )}
           </section>
 
-          <aside className="detail-rail" aria-label="Character intelligence">
-            <CharacterDetail
-              characterId={urlState.characterId}
-              character={detail.character}
-              comics={detail.comics}
+          <aside className="detail-rail" aria-label="Issue reading intelligence">
+            <IssueDetail
+              issueId={urlState.issueId}
+              issue={detail.issue}
               loading={detail.loading}
               error={detail.error}
-              favorite={
-                urlState.characterId
-                  ? favoriteSet.has(urlState.characterId)
-                  : false
+              saved={urlState.issueId ? savedIds.has(urlState.issueId) : false}
+              readingEntry={selectedReadingEntry}
+              readingCount={preferences.readingList.length}
+              onSaved={(issue) =>
+                setPreferences((current) => toggleSaved(current, issue))
               }
-              recentCount={preferences.recent.length}
-              onFavorite={toggleSelectedFavorite}
-              onClose={() => setUrlState({ characterId: null })}
+              onReading={(issue) =>
+                setPreferences((current) => toggleReadingItem(current, issue))
+              }
+              onReadToggle={(issueId, read) =>
+                setPreferences((current) => setReadingStatus(current, issueId, read))
+              }
+              onClose={() => setUrlState({ issueId: null })}
             />
           </aside>
         </div>
@@ -205,8 +234,9 @@ const App = () => {
 
       <footer className="site-footer">
         <p>
-          Data provided by Marvel. © 2026 MARVEL. Portfolio project; no account,
-          analytics, or tracking.
+          Metadata from the community-maintained Marvel Metadata API. Unofficial
+          portfolio project; not affiliated with Marvel Entertainment. No comic
+          content, accounts, analytics, cookies, or tracking.
         </p>
       </footer>
     </div>
