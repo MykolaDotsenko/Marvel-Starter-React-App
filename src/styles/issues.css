@@ -1,0 +1,19 @@
+@layer components {
+  .issue-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+  .issue-card { position:relative; min-width:0; min-height:250px; overflow:clip; border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface); box-shadow:0 8px 30px rgb(0 0 0 / .15); transition:transform 170ms ease,border-color 170ms ease,box-shadow 170ms ease; }
+  .issue-card:hover { transform:translateY(-3px); border-color:var(--line-strong); }
+  .issue-card.is-selected { border-color:color-mix(in oklch,var(--accent) 80%,white); box-shadow:0 0 0 1px var(--accent) inset,0 18px 50px rgb(240 20 30 / .16); }
+  .issue-card__select { width:100%; min-height:250px; display:grid; grid-template-rows:92px 1fr; border:0; background:transparent; color:inherit; padding:0; text-align:left; cursor:pointer; }
+  .issue-card__signal { display:flex; align-items:end; justify-content:space-between; gap:12px; background:linear-gradient(135deg,rgb(217 16 25 / .72),rgb(70 8 13 / .3)),#171920; padding:18px; }
+  .issue-card__signal span { font-size:clamp(1.3rem,3vw,2.2rem); font-weight:950; letter-spacing:-.06em; }
+  .issue-card__signal strong { color:rgb(255 255 255 / .62); font-size:.78rem; font-variant-numeric:tabular-nums; }
+  .issue-card__body { min-width:0; display:grid; align-content:start; gap:9px; padding:18px 16px 56px; }
+  .issue-card__series { overflow:hidden; color:#ff8a90; font-size:.68rem; font-weight:800; letter-spacing:.06em; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
+  .issue-card__body > strong { display:-webkit-box; overflow:hidden; color:var(--text); font-size:1.02rem; line-height:1.28; -webkit-box-orient:vertical; -webkit-line-clamp:3; }
+  .issue-card__meta { color:var(--muted); font-size:.7rem; line-height:1.4; }
+  .issue-card__actions { position:absolute; right:12px; bottom:12px; z-index:2; display:flex; gap:6px; }
+  .card-action,.icon-action { display:grid; width:36px; aspect-ratio:1; place-items:center; border:1px solid var(--line-strong); border-radius:50%; background:rgb(8 9 13 / .86); color:var(--focus); cursor:pointer; font-weight:900; }
+  .card-action[aria-pressed="true"] { background:#f1cc50; color:#18140a; }
+  .card-action:hover,.icon-action:hover:not(:disabled) { border-color:#747a89; background:#1a1d25; }
+  .icon-action:disabled { cursor:not-allowed; opacity:.3; }
+}

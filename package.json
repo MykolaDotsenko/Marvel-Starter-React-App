@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "A resilient, accessible Marvel character explorer built as a modern React engineering case study.",
+  "description": "Marvel Reading Atlas — an accessible React 19 comic discovery and local reading-list product.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -12,7 +12,7 @@
     "test": "vitest run tests",
     "test:e2e": "playwright test",
     "check": "npm run lint && npm test && npm run build",
-    "smoke:api": "node scripts/marvel-smoke.js"
+    "smoke:api": "node scripts/metadata-smoke.js"
   },
   "dependencies": {
     "react": "19.3.0",
@@ -36,7 +36,5 @@
     "vite": "8.3.0",
     "vitest": "5.0.1"
   },
-  "engines": {
-    "node": "24.x"
-  }
+  "engines": { "node": "24.x" }
 }
