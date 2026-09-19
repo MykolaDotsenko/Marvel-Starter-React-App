@@ -54,8 +54,10 @@
       display: none;
     }
 
-    .site-nav {
+    .site-header > .site-nav {
       display: none;
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .mobile-header-search {
@@ -372,6 +374,7 @@
       min-height: 148px;
       border-radius: 13px;
       contain-intrinsic-size: 148px;
+      scroll-margin-block: 72px calc(var(--mobile-nav-height) + 18px);
     }
 
     .issue-card__select {
@@ -580,6 +583,7 @@
       min-height: 92px;
       grid-template-columns: 42px minmax(0, 1fr);
       gap: 8px;
+      scroll-margin-block: 72px calc(var(--mobile-nav-height) + 18px);
     }
 
     .reading-item__open,
@@ -626,6 +630,13 @@
       min-height: 92px;
       padding-bottom: 12px;
       font-size: 0.72rem;
+    }
+
+    .issue-grid,
+    .saved-shelf,
+    .recent-timeline,
+    .reading-list {
+      padding-bottom: calc(var(--mobile-nav-height) + 12px);
     }
   }
 

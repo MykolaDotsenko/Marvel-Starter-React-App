@@ -392,6 +392,13 @@ test("a shared issue URL records the issue as recently viewed", async ({ page })
     page.getByRole("heading", { name: secretWars.title, exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /Recent.*1 item/ })).toBeVisible();
+
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width <= 700) {
+    await expect(page.locator(".detail-rail--open")).toBeVisible();
+    await page.getByRole("button", { name: /Close/ }).click();
+  }
+
   await expect(
     page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }),
   ).toBeVisible();
