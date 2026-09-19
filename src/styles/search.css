@@ -1,13 +1,13 @@
 @layer components {
   .search-panel {
-    width: min(100%, 980px);
+    width: min(100%, 920px);
     display: grid;
-    gap: 10px;
+    gap: 9px;
   }
 
   .search-panel__label {
     color: var(--paper-muted);
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     font-weight: 820;
     letter-spacing: 0.06em;
   }
@@ -17,11 +17,11 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 10px;
-    min-height: 62px;
+    min-height: 58px;
     border: 1px solid var(--line-strong);
     border-radius: 15px;
     background: color-mix(in oklch, var(--surface-quiet) 94%, transparent);
-    padding: 6px 7px 6px 16px;
+    padding: 5px 6px 5px 15px;
     box-shadow:
       0 1px 0 rgb(255 255 255 / 0.025) inset,
       0 18px 55px rgb(0 0 0 / 0.15);
@@ -49,7 +49,7 @@
     background: transparent;
     color: var(--paper);
     padding: 0;
-    font-size: 1rem;
+    font-size: 0.97rem;
   }
 
   .search-shell input::placeholder {
@@ -143,7 +143,7 @@
   }
 
   .search-submit {
-    min-width: 118px;
+    min-width: 112px;
   }
 
   .quick-searches {
@@ -152,7 +152,7 @@
     align-items: center;
     gap: 6px;
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
   }
 
   .quick-searches > span {
@@ -166,7 +166,7 @@
     border-radius: 999px;
     background: transparent;
     color: var(--muted);
-    padding: 6px 10px;
+    padding: 5px 9px;
     transition:
       color 140ms ease,
       border-color 140ms ease,
