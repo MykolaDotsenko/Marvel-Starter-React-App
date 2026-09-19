@@ -298,14 +298,11 @@
 
   @starting-style {
     .detail-card {
-      opacity: 0;
       transform: translateY(6px);
     }
   }
 
   .detail-card {
-    transition:
-      opacity 180ms ease,
-      transform 180ms ease;
+    transition: transform 180ms ease;
   }
 }
