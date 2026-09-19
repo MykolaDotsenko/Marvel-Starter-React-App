@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildMarvelUrl,
   createMarvelHash,
+  getAllowedCorsOrigin,
   isAllowedMarvelPath,
 } from "../api/_marvelProxy.js";
 
@@ -24,6 +25,14 @@ describe("Marvel production proxy", () => {
     expect(isAllowedMarvelPath("comics")).toBe(false);
     expect(isAllowedMarvelPath("../characters")).toBe(false);
     expect(isAllowedMarvelPath("characters/1/../../comics")).toBe(false);
+  });
+
+  it("allows CORS only for the GitHub Pages frontend origin", () => {
+    expect(getAllowedCorsOrigin("https://mykoladotsenko.github.io")).toBe(
+      "https://mykoladotsenko.github.io",
+    );
+    expect(getAllowedCorsOrigin("https://example.com")).toBeNull();
+    expect(getAllowedCorsOrigin(undefined)).toBeNull();
   });
 
   it("whitelists and normalizes forwarded query parameters", () => {

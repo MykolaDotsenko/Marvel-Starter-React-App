@@ -9,6 +9,7 @@ const DIRECT_API_BASE = "https://gateway.marvel.com/v1/public";
 const PUBLIC_KEY =
   import.meta.env.VITE_MARVEL_PUBLIC_KEY ||
   "6f00fba70811bdd9daa3cf27662d5b52";
+const PROXY_ORIGIN = import.meta.env.VITE_MARVEL_PROXY_ORIGIN?.trim() || null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 50;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -81,7 +82,7 @@ const appendParams = (url, params) => {
 };
 
 const buildProxyUrl = (pathname, params) => {
-  const url = new URL("/api/marvel", window.location.origin);
+  const url = new URL("/api/marvel", PROXY_ORIGIN || window.location.origin);
   url.searchParams.set("path", pathname);
   return appendParams(url, params);
 };
