@@ -8,7 +8,7 @@ const fullDateFormatter = new Intl.DateTimeFormat("en", {
 const compactDateFormatter = new Intl.DateTimeFormat("en", {
   year: "numeric",
   month: "short",
-  day: "2-digit",
+  day: "numeric",
   timeZone: "UTC",
 });
 
