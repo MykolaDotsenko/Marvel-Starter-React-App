@@ -156,14 +156,14 @@ test("search, URL state, detail and local favorite survive reload", async ({ pag
   await expect(page.getByText("The Amazing Spider-Man")).toBeVisible();
 
   await page.getByRole("button", { name: "Save character" }).click();
-  await expect(page.getByRole("button", { name: "Saved" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Saved", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
   await expect(page.getByRole("button", { name: /Saved 1/ })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("button", { name: "Saved" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Saved", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
