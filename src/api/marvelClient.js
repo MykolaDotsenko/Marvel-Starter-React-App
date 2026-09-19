@@ -5,7 +5,7 @@ import {
   sanitizeSearchTerm,
 } from "../domain/marvel.js";
 
-const API_BASE = "https://gateway.marvel.com/v1/public";
+const DIRECT_API_BASE = "https://gateway.marvel.com/v1/public";
 const PUBLIC_KEY =
   import.meta.env.VITE_MARVEL_PUBLIC_KEY ||
   "6f00fba70811bdd9daa3cf27662d5b52";
@@ -71,9 +71,18 @@ const createRequestSignal = (externalSignal) => {
   };
 };
 
-const request = async (pathname, params = {}, externalSignal) => {
-  const url = new URL(`${API_BASE}/${pathname}`);
-  url.searchParams.set("apikey", PUBLIC_KEY);
+const buildRequestUrl = (pathname, params) => {
+  const productionProxy = import.meta.env.PROD;
+
+  const url = productionProxy
+    ? new URL("/api/marvel", window.location.origin)
+    : new URL(`${DIRECT_API_BASE}/${pathname}`);
+
+  if (productionProxy) {
+    url.searchParams.set("path", pathname);
+  } else {
+    url.searchParams.set("apikey", PUBLIC_KEY);
+  }
 
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -81,6 +90,25 @@ const request = async (pathname, params = {}, externalSignal) => {
     }
   });
 
+  return url;
+};
+
+const readErrorMessage = async (response) => {
+  const payload = await response.json().catch(() => null);
+
+  if (payload?.error === "MARVEL_PROXY_UNCONFIGURED") {
+    return "Marvel API credentials are not configured for this deployment.";
+  }
+
+  return (
+    payload?.message ||
+    payload?.status ||
+    `Marvel API request failed with status ${response.status}.`
+  );
+};
+
+const request = async (pathname, params = {}, externalSignal) => {
+  const url = buildRequestUrl(pathname, params);
   const cacheKey = url.toString();
   const cached = readCache(cacheKey);
   if (cached) return cached;
@@ -94,7 +122,7 @@ const request = async (pathname, params = {}, externalSignal) => {
     });
 
     if (!response.ok) {
-      throw new Error(`Marvel API request failed with status ${response.status}.`);
+      throw new Error(await readErrorMessage(response));
     }
 
     const payload = await response.json();
