@@ -53,17 +53,6 @@
     font-weight: 700;
   }
 
-  .site-nav > button {
-    border-radius: 999px;
-    padding: 9px 12px;
-  }
-
-  .site-nav > button:hover {
-    background: var(--surface);
-    color: var(--text);
-  }
-
-
   .hero {
     min-height: min(700px, 72vh);
     display: grid;
