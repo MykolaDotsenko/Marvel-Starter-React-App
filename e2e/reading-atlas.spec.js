@@ -151,6 +151,10 @@ test("desktop dossier keeps an independent scrollport while the issue grid remai
     .getByRole("button", { name: `Open issue details for ${secretWars.title}` })
     .click();
 
+  await expect(
+    page.getByRole("heading", { name: secretWars.title, exact: true }),
+  ).toBeVisible();
+
   await page.locator(".explorer").evaluate((element) => {
     element.style.minHeight = "1600px";
   });
@@ -185,12 +189,18 @@ test("desktop dossier keeps an independent scrollport while the issue grid remai
   expect(railTop).toBeGreaterThanOrEqual(96);
   expect(railTop).toBeLessThanOrEqual(100);
 
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+  );
   const pageScrollBefore = await page.evaluate(() => window.scrollY);
 
   await card.evaluate((element) => {
     element.scrollTop = Math.floor(element.scrollHeight * 0.55);
   });
 
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+  );
   const detailScrollTop = await card.evaluate((element) => element.scrollTop);
   const pageScrollAfter = await page.evaluate(() => window.scrollY);
 
