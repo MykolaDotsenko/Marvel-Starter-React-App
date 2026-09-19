@@ -133,9 +133,7 @@ test("main state has no serious accessibility violations", async ({ page }) => {
     .getByRole("button", { name: "Open details for Spider-Man" })
     .click();
 
-  const results = await new AxeBuilder({ page })
-    .disableRules(["color-contrast"])
-    .analyze();
+  const results = await new AxeBuilder({ page }).analyze();
 
   expect(results.violations).toEqual([]);
 });

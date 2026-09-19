@@ -55,8 +55,8 @@
     --faint: #747884;
     --line: #2b2f39;
     --line-strong: #404550;
-    --accent: #f0141e;
-    --accent-strong: #ff3b44;
+    --accent: #d91019;
+    --accent-strong: #f02a33;
     --accent-soft: color-mix(in oklch, var(--accent) 14%, transparent);
     --success: #75e4b3;
     --focus: #ffdf71;
