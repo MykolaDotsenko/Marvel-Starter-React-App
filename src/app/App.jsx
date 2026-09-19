@@ -52,7 +52,7 @@ const App = () => {
   const [urlState, setUrlState] = useUrlState();
   const [preferences, setPreferences] = useState(loadPreferences);
   const [showCompactSearch, setShowCompactSearch] = useState(false);
-  const heroRef = useRef(null);
+  const heroSearchRef = useRef(null);
 
   const rememberViewedIssue = useCallback((issue) => {
     setPreferences((current) => rememberIssue(current, issue));
@@ -76,15 +76,16 @@ const App = () => {
   }, [preferences]);
 
   useEffect(() => {
-    const hero = heroRef.current;
+    const heroSearch = heroSearchRef.current;
 
-    if (!hero || typeof IntersectionObserver === "undefined") {
+    if (!heroSearch || typeof IntersectionObserver === "undefined") {
       return undefined;
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        const passedHeader = !entry.isIntersecting && entry.boundingClientRect.bottom <= 84;
+        const passedHeader =
+          !entry.isIntersecting && entry.boundingClientRect.bottom <= 84;
         setShowCompactSearch(passedHeader);
       },
       {
@@ -93,7 +94,7 @@ const App = () => {
       },
     );
 
-    observer.observe(hero);
+    observer.observe(heroSearch);
     return () => observer.disconnect();
   }, []);
 
@@ -163,7 +164,6 @@ const App = () => {
 
       <main id="main-content">
         <section
-          ref={heroRef}
           className={`hero${isCompactHero ? " hero--compact" : ""}`}
           aria-labelledby="hero-title"
         >
@@ -198,7 +198,7 @@ const App = () => {
               </p>
             </div>
 
-            <div className="hero__search-anchor">
+            <div ref={heroSearchRef} className="hero__search-anchor">
               <SearchPanel
                 key={urlState.query}
                 activeQuery={urlState.query}
