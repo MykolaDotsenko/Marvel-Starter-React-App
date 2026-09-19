@@ -4,6 +4,19 @@
       grid-template-columns: minmax(0, 1fr) minmax(380px, 0.55fr);
     }
 
+    .hero {
+      grid-template-columns: minmax(0, 1fr) minmax(310px, 0.58fr);
+      gap: 38px;
+    }
+
+    .hero-title--editorial {
+      font-size: clamp(3.3rem, 5vw, 4.9rem);
+    }
+
+    .site-header--search-visible .brand small {
+      display: none;
+    }
+
     .reading-summary {
       grid-template-columns: 1fr 1fr;
     }
@@ -15,9 +28,31 @@
     }
   }
 
+  @media (max-width: 1040px) {
+    .site-header--search-visible .brand > span:last-child {
+      display: none;
+    }
+
+    .header-search {
+      max-width: none;
+    }
+
+    .site-nav {
+      gap: 1px;
+    }
+
+    .site-nav > button {
+      padding-inline: 7px;
+    }
+  }
+
   @media (max-width: 980px) {
     :root {
       --page: min(100% - 28px, 820px);
+    }
+
+    .header-search {
+      display: none;
     }
 
     .hero,
@@ -27,21 +62,24 @@
 
     .hero {
       min-height: auto;
-      padding: 68px 0 42px;
+      gap: 26px;
+      padding: 58px 0 40px;
     }
 
-    .hero__metrics {
-      width: 100%;
-      grid-template-columns: repeat(3, 1fr);
+    .atlas-route-panel {
+      width: min(100%, 620px);
     }
 
-    .hero__metrics dd {
-      grid-template-columns: 1fr;
-      gap: 4px;
+    .hero-title--editorial {
+      font-size: clamp(3.2rem, 8.4vw, 5rem);
+    }
+
+    .hero-title__line {
+      white-space: normal;
     }
 
     .hero--compact {
-      padding-block: 28px;
+      padding-block: 27px;
     }
 
     .workspace {
@@ -84,27 +122,40 @@
       padding-inline: 4px;
     }
 
-    h1 {
-      font-size: clamp(2.7rem, 13vw, 4.9rem);
+    .hero {
+      padding-top: 44px;
     }
 
-    .hero__metrics {
-      grid-template-columns: 1fr;
+    .hero-title--editorial {
+      font-size: clamp(2.8rem, 12.2vw, 4.5rem);
+      line-height: 0.92;
     }
 
-    .hero__metrics dd {
-      grid-template-columns: 80px 1fr;
+    .hero-title__journey {
+      padding-inline: 0.025em 0.05em;
+    }
+
+    .hero__lede {
+      font-size: 0.94rem;
+    }
+
+    .atlas-route-panel {
+      border-radius: 16px;
+    }
+
+    .atlas-route-visual {
+      padding-inline: 8px;
     }
 
     .search-shell {
       grid-template-columns: auto minmax(0, 1fr);
-      padding-block: 10px;
+      padding-block: 9px;
     }
 
     .search-submit {
       grid-column: 1 / -1;
       width: 100%;
-      min-height: 43px;
+      min-height: 42px;
     }
 
     .reading-item,
@@ -143,19 +194,35 @@
 
     .hero,
     .hero--compact {
-      padding-top: 40px;
+      padding-top: 36px;
     }
 
     .hero__content {
-      gap: 22px;
+      gap: 18px;
     }
 
-    .hero--compact h1 {
+    .hero-title--editorial {
+      font-size: clamp(2.55rem, 12.8vw, 3.8rem);
+    }
+
+    .hero-title--compact {
       font-size: clamp(2rem, 10vw, 3.2rem);
     }
 
     .hero__lede {
-      font-size: 0.94rem;
+      font-size: 0.91rem;
+    }
+
+    .atlas-route-panel__heading {
+      padding-inline: 15px;
+    }
+
+    .atlas-route-panel__signal {
+      display: none;
+    }
+
+    .atlas-route-metrics > div {
+      padding-inline: 10px;
     }
 
     .quick-searches {
@@ -163,7 +230,7 @@
     }
 
     .quick-searches button {
-      padding: 6px 8px;
+      padding: 5px 8px;
     }
 
     .section-heading {
@@ -223,6 +290,10 @@
     .detail-actions .secondary-action {
       flex: 1 1 auto;
     }
+
+    .atlas-route-metrics {
+      grid-template-columns: 1fr;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -238,6 +309,10 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;
     }
+
+    .atlas-route-node__pulse {
+      display: none;
+    }
   }
 
   @media (forced-colors: active) {
@@ -245,8 +320,20 @@
     .primary-action,
     .card-action,
     .detail-card__status > span,
-    .recent-item__rail > span {
+    .recent-item__rail > span,
+    .atlas-route-panel__signal::before {
       forced-color-adjust: none;
+    }
+
+    .hero-title__journey::before,
+    .hero-title__journey::after,
+    .hero::before,
+    .hero::after {
+      display: none;
+    }
+
+    .hero-title__journey {
+      border-bottom: 3px solid Highlight;
     }
 
     .issue-card.is-selected,

@@ -118,6 +118,39 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+
+test("editorial hero composes a route and promotes search into the sticky header", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator(".hero-title__line")).toHaveCount(3);
+  await expect(page.locator(".hero-title__journey")).toContainText("reading journey");
+  await expect(page.locator(".atlas-route-panel")).toBeVisible();
+  await expect(page.getByRole("search", { name: "Sticky comic search" })).toHaveCount(0);
+
+  await page.evaluate(() => {
+    const workspace = document.querySelector(".workspace");
+    window.scrollTo({ top: workspace.offsetTop + 180, behavior: "instant" });
+  });
+
+  const viewport = page.viewportSize();
+  const stickySearch = page.getByRole("search", { name: "Sticky comic search" });
+
+  if (viewport && viewport.width <= 980) {
+    await expect(stickySearch).not.toBeVisible();
+    return;
+  }
+
+  await expect(stickySearch).toHaveCount(1);
+  await expect(stickySearch).toBeVisible();
+  await page.getByLabel("Search Marvel comics from the sticky header").fill("Avengers");
+  await page.getByRole("button", { name: "Search from sticky header" }).click();
+
+  await expect(page).toHaveURL(/q=Avengers/);
+  await expect(
+    page.getByRole("button", { name: `Open issue details for ${avengers.title}` }),
+  ).toBeVisible();
+});
+
 test("search, dossier, saved state and journey progress survive reload", async ({ page }) => {
   await page.goto("/");
 
