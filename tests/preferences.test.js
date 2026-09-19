@@ -33,7 +33,7 @@ const createStorage = (initial = {}) => {
 };
 
 describe("reading library storage", () => {
-  it("normalizes duplicates and malformed snapshots", () => {
+  it("normalizes duplicates and migrates legacy recent snapshots", () => {
     const result = parsePreferences({
       saved: [issue(1), issue(1), { id: "bad" }],
       recent: [issue(2), issue(2)],
@@ -42,10 +42,25 @@ describe("reading library storage", () => {
         { issue: issue(3), read: false },
       ],
     });
+
     expect(result.saved).toHaveLength(1);
     expect(result.recent).toHaveLength(1);
+    expect(result.recent[0]).toEqual({
+      issue: expect.objectContaining({ id: 2 }),
+      viewedAt: null,
+    });
     expect(result.readingList).toHaveLength(1);
     expect(result.readingList[0].read).toBe(true);
+  });
+
+  it("preserves recent timestamps in the normalized storage shape", () => {
+    const viewedAt = 1_789_837_200_000;
+    const result = parsePreferences({
+      recent: [{ issue: issue(4), viewedAt }],
+    });
+
+    expect(result.recent[0].viewedAt).toBe(viewedAt);
+    expect(result.recent[0].issue.id).toBe(4);
   });
 
   it("recovers from corrupted JSON", () => {
@@ -58,26 +73,47 @@ describe("reading library storage", () => {
     const saved = savePreferences(
       {
         saved: [issue(1), issue(1)],
-        recent: [issue(2)],
+        recent: [{ issue: issue(2), viewedAt: 123 }],
         readingList: [{ issue: issue(3), read: false }],
       },
       storage,
     );
+
     expect(saved.saved).toHaveLength(1);
+    expect(saved.recent[0].issue.id).toBe(2);
+    expect(saved.recent[0].viewedAt).toBe(123);
     expect(saved.readingList[0].issue.id).toBe(3);
   });
 
   it("updates saved, recent and reading state immutably", () => {
     const start = { saved: [], recent: [], readingList: [] };
     const withSaved = toggleSaved(start, issue(1));
-    const withRecent = rememberIssue(withSaved, issue(2));
+    const withRecent = rememberIssue(withSaved, issue(2), 500);
     const withReading = toggleReadingItem(withRecent, issue(3));
     const read = setReadingStatus(withReading, 3, true);
 
     expect(read.saved[0].id).toBe(1);
-    expect(read.recent[0].id).toBe(2);
+    expect(read.recent[0].issue.id).toBe(2);
+    expect(read.recent[0].viewedAt).toBe(500);
     expect(read.readingList[0].read).toBe(true);
     expect(start).toEqual({ saved: [], recent: [], readingList: [] });
+  });
+
+  it("moves a revisited issue to the front with a fresh timestamp", () => {
+    const start = {
+      saved: [],
+      recent: [
+        { issue: issue(1), viewedAt: 100 },
+        { issue: issue(2), viewedAt: 90 },
+      ],
+      readingList: [],
+    };
+
+    const next = rememberIssue(start, issue(2), 200);
+
+    expect(next.recent.map((entry) => entry.issue.id)).toEqual([2, 1]);
+    expect(next.recent[0].viewedAt).toBe(200);
+    expect(start.recent.map((entry) => entry.issue.id)).toEqual([1, 2]);
   });
 
   it("reorders reading items without mutation", () => {
@@ -90,6 +126,7 @@ describe("reading library storage", () => {
       ],
     };
     const moved = moveReadingItem(start, 2, -1);
+
     expect(moved.readingList.map((item) => item.issue.id)).toEqual([2, 1]);
     expect(start.readingList.map((item) => item.issue.id)).toEqual([1, 2]);
   });
