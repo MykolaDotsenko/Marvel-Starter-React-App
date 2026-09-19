@@ -132,16 +132,16 @@ test("editorial hero composes a route and promotes search into the sticky header
     window.scrollTo({ top: workspace.offsetTop + 180, behavior: "instant" });
   });
 
-  await expect(page.getByRole("search", { name: "Sticky comic search" })).toHaveCount(1);
-
   const viewport = page.viewportSize();
+  const stickySearch = page.getByRole("search", { name: "Sticky comic search" });
 
   if (viewport && viewport.width <= 980) {
-    await expect(page.getByRole("search", { name: "Sticky comic search" })).toBeHidden();
+    await expect(stickySearch).not.toBeVisible();
     return;
   }
 
-  await expect(page.getByRole("search", { name: "Sticky comic search" })).toBeVisible();
+  await expect(stickySearch).toHaveCount(1);
+  await expect(stickySearch).toBeVisible();
   await page.getByLabel("Search Marvel comics from the sticky header").fill("Avengers");
   await page.getByRole("button", { name: "Search from sticky header" }).click();
 
