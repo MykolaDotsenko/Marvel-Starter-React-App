@@ -187,3 +187,32 @@ The previous monolithic stylesheet is split by responsibility: reset, tokens,
 base, header/hero, search, layout, character cards, detail, feedback states, and
 responsive behavior. Cascade layers preserve explicit ordering without a CSS
 framework.
+
+
+## Production Marvel API boundary
+
+Production traffic uses a same-origin Vercel Function:
+
+```text
+Browser
+  |
+  +--> /api/marvel
+          |
+          +--> whitelist path + query params
+          +--> server-only MARVEL_PUBLIC_KEY / MARVEL_PRIVATE_KEY
+          +--> ts + MD5 authentication
+          |
+          +--> gateway.marvel.com
+```
+
+The browser never receives the Marvel private key. Local Vite development can
+continue to use the public-key browser flow, while deployed builds switch to the
+same-origin proxy via `import.meta.env.PROD`.
+
+The proxy intentionally supports only:
+
+- `characters`
+- `characters/:id`
+- `characters/:id/comics`
+
+This prevents the endpoint from becoming a generic upstream relay.
