@@ -204,8 +204,14 @@ test("phone UI uses app navigation, compact cards and minimum touch targets", as
 
   await page.goto("/");
 
-  const desktopNav = page.getByRole("navigation", { name: "Reading Atlas views" });
-  const mobileNav = page.getByRole("navigation", { name: "Mobile Reading Atlas views" });
+  const desktopNav = page.getByRole("navigation", {
+    name: "Reading Atlas views",
+    exact: true,
+  });
+  const mobileNav = page.getByRole("navigation", {
+    name: "Mobile Reading Atlas views",
+    exact: true,
+  });
 
   await expect(desktopNav).toBeHidden();
   await expect(mobileNav).toBeVisible();
@@ -409,10 +415,10 @@ test("a shared issue URL records the issue as recently viewed", async ({ page })
   await expect(
     page.getByRole("heading", { name: secretWars.title, exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /Recent.*1 item/ })).toBeVisible();
 
   await closePhoneDossier(page);
 
+  await expect(page.getByRole("button", { name: /Recent.*1 item/ })).toBeVisible();
   await expect(
     page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }),
   ).toBeVisible();

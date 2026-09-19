@@ -585,6 +585,7 @@
       }
   
       .search-submit {
+        grid-column: auto;
         min-width: var(--touch-target);
         width: var(--touch-target);
         min-height: var(--touch-target);
