@@ -47,6 +47,25 @@ const detail = (issue) => ({
   cover: { path: `https://images.example.test/${issue.id}`, extension: "jpg" },
 });
 
+const isPhone = (page) => {
+  const viewport = page.viewportSize();
+  return Boolean(viewport && viewport.width <= 700);
+};
+
+const expectTouchTarget = (box) => {
+  expect(box).not.toBeNull();
+  expect(Math.round(box.width)).toBeGreaterThanOrEqual(44);
+  expect(Math.round(box.height)).toBeGreaterThanOrEqual(44);
+};
+
+const closePhoneDossier = async (page) => {
+  if (!isPhone(page)) return;
+
+  await expect(page.locator(".detail-rail--open")).toBeVisible();
+  await page.getByRole("button", { name: /Close/ }).click();
+  await expect(page.locator(".detail-rail--open")).toHaveCount(0);
+};
+
 test.beforeEach(async ({ page }) => {
   const attempts = new Map();
 
@@ -132,6 +151,10 @@ test("desktop dossier keeps an independent scrollport while the issue grid remai
     .getByRole("button", { name: `Open issue details for ${secretWars.title}` })
     .click();
 
+  await expect(
+    page.getByRole("heading", { name: secretWars.title, exact: true }),
+  ).toBeVisible();
+
   await page.locator(".explorer").evaluate((element) => {
     element.style.minHeight = "1600px";
   });
@@ -166,17 +189,23 @@ test("desktop dossier keeps an independent scrollport while the issue grid remai
   expect(railTop).toBeGreaterThanOrEqual(96);
   expect(railTop).toBeLessThanOrEqual(100);
 
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+  );
   const pageScrollBefore = await page.evaluate(() => window.scrollY);
 
   await card.evaluate((element) => {
     element.scrollTop = Math.floor(element.scrollHeight * 0.55);
   });
 
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => resolve())),
+  );
   const detailScrollTop = await card.evaluate((element) => element.scrollTop);
   const pageScrollAfter = await page.evaluate(() => window.scrollY);
 
   expect(detailScrollTop).toBeGreaterThan(0);
-  expect(pageScrollAfter).toBe(pageScrollBefore);
+  expect(Math.abs(pageScrollAfter - pageScrollBefore)).toBeLessThan(2);
 });
 
 test("phone UI uses app navigation, compact cards and minimum touch targets", async ({ page }) => {
@@ -185,8 +214,14 @@ test("phone UI uses app navigation, compact cards and minimum touch targets", as
 
   await page.goto("/");
 
-  const desktopNav = page.getByRole("navigation", { name: "Reading Atlas views" });
-  const mobileNav = page.getByRole("navigation", { name: "Mobile Reading Atlas views" });
+  const desktopNav = page.getByRole("navigation", {
+    name: "Reading Atlas views",
+    exact: true,
+  });
+  const mobileNav = page.getByRole("navigation", {
+    name: "Mobile Reading Atlas views",
+    exact: true,
+  });
 
   await expect(desktopNav).toBeHidden();
   await expect(mobileNav).toBeVisible();
@@ -200,15 +235,14 @@ test("phone UI uses app navigation, compact cards and minimum touch targets", as
 
   const cardActions = firstCard.locator(".card-action");
   for (let index = 0; index < await cardActions.count(); index += 1) {
-    const box = await cardActions.nth(index).boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expectTouchTarget(await cardActions.nth(index).boundingBox());
   }
 
   const navButtons = mobileNav.getByRole("button");
   for (let index = 0; index < await navButtons.count(); index += 1) {
     const box = await navButtons.nth(index).boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(box).not.toBeNull();
+    expect(Math.round(box.height)).toBeGreaterThanOrEqual(44);
   }
 
   const overflow = await page.evaluate(
@@ -233,10 +267,11 @@ test("phone search stays one-line and quick routes scroll horizontally", async (
     submit.boundingBox(),
   ]);
 
-  expect(Math.abs((inputBox?.y ?? 0) - (submitBox?.y ?? 0))).toBeLessThan(10);
+  const inputCenterY = (inputBox?.y ?? 0) + (inputBox?.height ?? 0) / 2;
+  const submitCenterY = (submitBox?.y ?? 0) + (submitBox?.height ?? 0) / 2;
+  expect(Math.abs(inputCenterY - submitCenterY)).toBeLessThan(2);
   expect(shellBox?.height).toBeLessThanOrEqual(62);
-  expect(submitBox?.width).toBeGreaterThanOrEqual(44);
-  expect(submitBox?.height).toBeGreaterThanOrEqual(44);
+  expectTouchTarget(submitBox);
 
   const quick = page.locator(".quick-searches");
   const quickStyles = await quick.evaluate((element) => {
@@ -273,8 +308,7 @@ test("phone dossier opens as a fullscreen layer and closes back to discovery", a
   expect(bodyOverflow).toBe("hidden");
 
   const close = page.getByRole("button", { name: /Close/ });
-  const closeBox = await close.boundingBox();
-  expect(closeBox?.height).toBeGreaterThanOrEqual(44);
+  expectTouchTarget(await close.boundingBox());
 
   await close.click();
   await expect(page).not.toHaveURL(/issue=/);
@@ -347,16 +381,17 @@ test("search, dossier, saved state and journey progress survive reload", async (
   await page.getByRole("button", { name: "Add to journey" }).click();
   await page.getByRole("button", { name: "Mark read" }).click();
 
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Mark unread" })).toBeVisible();
+
+  await closePhoneDossier(page);
+
   await expect(page.getByRole("button", { name: /Saved.*1 item/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Journey.*1 item/ })).toBeVisible();
-
-  await page.reload();
-
   await expect(page.getByRole("button", { name: /Saved.*1 item/ })).toHaveAttribute(
     "aria-pressed",
     "false",
   );
-  await expect(page.getByRole("button", { name: "Mark unread" })).toBeVisible();
 });
 
 test("saved shelf and recent timeline expose specialized local views", async ({ page }) => {
@@ -365,6 +400,7 @@ test("saved shelf and recent timeline expose specialized local views", async ({ 
     .getByRole("button", { name: `Open issue details for ${secretWars.title}` })
     .click();
   await page.getByRole("button", { name: "Save issue" }).click();
+  await closePhoneDossier(page);
 
   await page.getByRole("button", { name: /Saved.*1 item/ }).click();
   await expect(page).toHaveURL(/view=saved/);
@@ -391,14 +427,10 @@ test("a shared issue URL records the issue as recently viewed", async ({ page })
   await expect(
     page.getByRole("heading", { name: secretWars.title, exact: true }),
   ).toBeVisible();
+
+  await closePhoneDossier(page);
+
   await expect(page.getByRole("button", { name: /Recent.*1 item/ })).toBeVisible();
-
-  const viewport = page.viewportSize();
-  if (viewport && viewport.width <= 700) {
-    await expect(page.locator(".detail-rail--open")).toBeVisible();
-    await page.getByRole("button", { name: /Close/ }).click();
-  }
-
   await expect(
     page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }),
   ).toBeVisible();

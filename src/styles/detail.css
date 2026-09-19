@@ -319,6 +319,7 @@
       max-height: calc(
         100dvh - var(--detail-sticky-top) - var(--detail-viewport-gap)
       );
+      overflow-anchor: none;
       overflow-x: hidden;
       overflow-y: auto;
       scrollbar-gutter: stable;

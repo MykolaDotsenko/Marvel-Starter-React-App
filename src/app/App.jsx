@@ -52,12 +52,19 @@ const viewCopy = {
 const App = () => {
   const [urlState, setUrlState] = useUrlState();
   const [preferences, setPreferences] = useState(loadPreferences);
+  const preferencesRef = useRef(preferences);
   const [showCompactSearch, setShowCompactSearch] = useState(false);
   const heroSearchRef = useRef(null);
 
-  const rememberViewedIssue = useCallback((issue) => {
-    setPreferences((current) => rememberIssue(current, issue));
+  const updatePreferences = useCallback((transform) => {
+    const next = savePreferences(transform(preferencesRef.current));
+    preferencesRef.current = next;
+    setPreferences(next);
   }, []);
+
+  const rememberViewedIssue = useCallback((issue) => {
+    updatePreferences((current) => rememberIssue(current, issue));
+  }, [updatePreferences]);
 
   const isExplore = urlState.view === "explore";
   const isSaved = urlState.view === "saved";
@@ -71,10 +78,6 @@ const App = () => {
   const detail = useIssueDetails(urlState.issueId, {
     onLoaded: rememberViewedIssue,
   });
-
-  useEffect(() => {
-    savePreferences(preferences);
-  }, [preferences]);
 
   useEffect(() => {
     const heroSearch = heroSearchRef.current;
@@ -237,13 +240,13 @@ const App = () => {
                 selectedId={urlState.issueId}
                 onOpen={selectIssue}
                 onMarkRead={(issueId, read) =>
-                  setPreferences((current) => setReadingStatus(current, issueId, read))
+                  updatePreferences((current) => setReadingStatus(current, issueId, read))
                 }
                 onMove={(issueId, direction) =>
-                  setPreferences((current) => moveReadingItem(current, issueId, direction))
+                  updatePreferences((current) => moveReadingItem(current, issueId, direction))
                 }
                 onRemove={(issue) =>
-                  setPreferences((current) => toggleReadingItem(current, issue))
+                  updatePreferences((current) => toggleReadingItem(current, issue))
                 }
               />
             ) : isSaved ? (
@@ -253,10 +256,10 @@ const App = () => {
                 readingIds={readingIds}
                 onOpen={selectIssue}
                 onSaved={(issue) =>
-                  setPreferences((current) => toggleSaved(current, issue))
+                  updatePreferences((current) => toggleSaved(current, issue))
                 }
                 onReading={(issue) =>
-                  setPreferences((current) => toggleReadingItem(current, issue))
+                  updatePreferences((current) => toggleReadingItem(current, issue))
                 }
               />
             ) : isRecent ? (
@@ -267,10 +270,10 @@ const App = () => {
                 readingIds={readingIds}
                 onOpen={selectIssue}
                 onSaved={(issue) =>
-                  setPreferences((current) => toggleSaved(current, issue))
+                  updatePreferences((current) => toggleSaved(current, issue))
                 }
                 onReading={(issue) =>
-                  setPreferences((current) => toggleReadingItem(current, issue))
+                  updatePreferences((current) => toggleReadingItem(current, issue))
                 }
               />
             ) : (
@@ -285,10 +288,10 @@ const App = () => {
                 ended={urlState.query ? true : issues.ended}
                 onSelect={selectIssue}
                 onSaved={(issue) =>
-                  setPreferences((current) => toggleSaved(current, issue))
+                  updatePreferences((current) => toggleSaved(current, issue))
                 }
                 onReading={(issue) =>
-                  setPreferences((current) => toggleReadingItem(current, issue))
+                  updatePreferences((current) => toggleReadingItem(current, issue))
                 }
                 onLoadMore={issues.loadMore}
                 onRetryInitial={issues.retryInitial}
@@ -309,13 +312,13 @@ const App = () => {
               readingEntry={selectedReadingEntry}
               readingCount={preferences.readingList.length}
               onSaved={(issue) =>
-                setPreferences((current) => toggleSaved(current, issue))
+                updatePreferences((current) => toggleSaved(current, issue))
               }
               onReading={(issue) =>
-                setPreferences((current) => toggleReadingItem(current, issue))
+                updatePreferences((current) => toggleReadingItem(current, issue))
               }
               onReadToggle={(issueId, read) =>
-                setPreferences((current) => setReadingStatus(current, issueId, read))
+                updatePreferences((current) => setReadingStatus(current, issueId, read))
               }
               onClose={() => setUrlState({ issueId: null })}
             />
