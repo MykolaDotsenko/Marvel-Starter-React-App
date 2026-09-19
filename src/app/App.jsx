@@ -3,8 +3,10 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import { AtlasRoutePanel } from "../components/AtlasRoutePanel.jsx";
 import { Header } from "../components/Header.jsx";
 import { IssueDetail } from "../components/IssueDetail.jsx";
 import { IssueGrid } from "../components/IssueGrid.jsx";
@@ -49,6 +51,8 @@ const viewCopy = {
 const App = () => {
   const [urlState, setUrlState] = useUrlState();
   const [preferences, setPreferences] = useState(loadPreferences);
+  const [showCompactSearch, setShowCompactSearch] = useState(false);
+  const heroRef = useRef(null);
 
   const rememberViewedIssue = useCallback((issue) => {
     setPreferences((current) => rememberIssue(current, issue));
@@ -70,6 +74,28 @@ const App = () => {
   useEffect(() => {
     savePreferences(preferences);
   }, [preferences]);
+
+  useEffect(() => {
+    const hero = heroRef.current;
+
+    if (!hero || typeof IntersectionObserver === "undefined") {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const passedHeader = !entry.isIntersecting && entry.boundingClientRect.bottom <= 84;
+        setShowCompactSearch(passedHeader);
+      },
+      {
+        rootMargin: "-84px 0px 0px 0px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
 
   const savedIds = useMemo(
     () => new Set(preferences.saved.map((issue) => issue.id)),
@@ -126,54 +152,63 @@ const App = () => {
     <div className="app-shell">
       <Header
         activeView={urlState.view}
+        activeQuery={urlState.query}
         savedCount={preferences.saved.length}
         readingCount={preferences.readingList.length}
         recentCount={preferences.recent.length}
+        showCompactSearch={showCompactSearch}
+        onSearch={submitSearch}
         onViewChange={changeView}
       />
 
       <main id="main-content">
         <section
+          ref={heroRef}
           className={`hero${isCompactHero ? " hero--compact" : ""}`}
           aria-labelledby="hero-title"
         >
           <div className="hero__content">
             <div className="hero__copy">
               <p className="eyebrow">Marvel Reading Atlas / reading intelligence</p>
-              <h1 id="hero-title">
-                {isCompactHero
-                  ? "Find the next issue on your route."
-                  : "Build a Marvel reading journey you’ll actually finish."}
-              </h1>
+
+              {isCompactHero ? (
+                <h1 id="hero-title" className="hero-title hero-title--compact">
+                  Find the next issue on your route.
+                </h1>
+              ) : (
+                <h1
+                  id="hero-title"
+                  className="hero-title hero-title--editorial"
+                  aria-label="Build a Marvel reading journey you’ll actually finish."
+                >
+                  <span className="hero-title__line">Build a Marvel</span>
+                  <span className="hero-title__line hero-title__journey">
+                    <span>reading journey</span>
+                  </span>
+                  <span className="hero-title__line hero-title__finish">
+                    you’ll actually finish.
+                  </span>
+                </h1>
+              )}
+
               <p className="hero__lede">
                 {isCompactHero
                   ? "Search the archive, inspect a dossier, then keep only what belongs in your journey."
-                  : "Explore tens of thousands of issues, inspect creator and series metadata, and turn discovery into an ordered reading route — with no account required."}
+                  : "Explore Marvel issues, inspect creator context, and turn discoveries into an ordered reading journey — no account required."}
               </p>
             </div>
 
-            <SearchPanel
-              key={urlState.query}
-              activeQuery={urlState.query}
-              onSubmit={submitSearch}
-              quickSearches={quickSearches}
-            />
+            <div className="hero__search-anchor">
+              <SearchPanel
+                key={urlState.query}
+                activeQuery={urlState.query}
+                onSubmit={submitSearch}
+                quickSearches={quickSearches}
+              />
+            </div>
           </div>
 
-          <dl className="hero__metrics" aria-label="Product capabilities">
-            <div>
-              <dt>Archive</dt>
-              <dd><strong>37.5K+</strong><span>comic issues</span></dd>
-            </div>
-            <div>
-              <dt>Progress</dt>
-              <dd><strong>Local</strong><span>private by default</span></dd>
-            </div>
-            <div>
-              <dt>Account</dt>
-              <dd><strong>None</strong><span>start immediately</span></dd>
-            </div>
-          </dl>
+          {isCompactHero ? null : <AtlasRoutePanel />}
         </section>
 
         <div className="workspace">

@@ -1,8 +1,13 @@
+import { CompactSearch } from "./CompactSearch.jsx";
+
 export const Header = ({
   activeView,
+  activeQuery,
   savedCount,
   readingCount,
   recentCount,
+  showCompactSearch,
+  onSearch,
   onViewChange,
 }) => {
   const items = [
@@ -13,7 +18,9 @@ export const Header = ({
   ];
 
   return (
-    <header className="site-header">
+    <header
+      className={`site-header${showCompactSearch ? " site-header--search-visible" : ""}`}
+    >
       <button
         className="brand brand--button"
         type="button"
@@ -26,6 +33,10 @@ export const Header = ({
           <small>Comic discovery & reading journeys</small>
         </span>
       </button>
+
+      {showCompactSearch ? (
+        <CompactSearch activeQuery={activeQuery} onSubmit={onSearch} />
+      ) : null}
 
       <nav className="site-nav" aria-label="Reading Atlas views">
         {items.map(([view, label, count]) => (
