@@ -15,15 +15,18 @@ const createState = (key) => ({
   error: null,
 });
 
-export const useIssueList = (query) => {
+export const useIssueList = (query, { enabled = true } = {}) => {
   const [attempt, setAttempt] = useState(0);
-  const key = `${query}::${attempt}`;
+  const key = `${enabled ? "active" : "paused"}::${query}::${attempt}`;
   const [state, setState] = useState(() => createState(""));
   const loadMoreController = useRef(null);
 
   useEffect(() => {
-    const controller = new AbortController();
     loadMoreController.current?.abort();
+
+    if (!enabled) return undefined;
+
+    const controller = new AbortController();
 
     const load = query
       ? searchIssues(query, { signal: controller.signal })
@@ -51,7 +54,7 @@ export const useIssueList = (query) => {
       });
 
     return () => controller.abort();
-  }, [key, query]);
+  }, [enabled, key, query]);
 
   useEffect(
     () => () => {
@@ -60,16 +63,30 @@ export const useIssueList = (query) => {
     [],
   );
 
-  const current = state.key === key ? state : createState(key);
+  const current =
+    enabled && state.key === key
+      ? state
+      : {
+          ...createState(key),
+          ended: !enabled,
+        };
 
   const retryInitial = useCallback(() => {
-    setAttempt((value) => value + 1);
-  }, []);
+    if (enabled) setAttempt((value) => value + 1);
+  }, [enabled]);
 
   const loadMore = useCallback(async () => {
     const initialError = current.error && current.items.length === 0;
 
-    if (query || current.loadingMore || current.ended || initialError) return;
+    if (
+      !enabled ||
+      query ||
+      current.loadingMore ||
+      current.ended ||
+      initialError
+    ) {
+      return;
+    }
 
     loadMoreController.current?.abort();
     const controller = new AbortController();
@@ -116,13 +133,14 @@ export const useIssueList = (query) => {
     current.items.length,
     current.loadingMore,
     current.offset,
+    enabled,
     key,
     query,
   ]);
 
   return {
     ...current,
-    loading: state.key !== key,
+    loading: enabled && state.key !== key,
     loadMore,
     retryInitial,
   };

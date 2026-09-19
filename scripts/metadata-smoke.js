@@ -1,39 +1,57 @@
 const base =
   process.env.MARVEL_METADATA_API || "https://marvel.emreparker.com/v1";
 
-const health = await fetch(new URL(`${base}/health`), {
-  headers: { Accept: "application/json" },
-  signal: AbortSignal.timeout(10_000),
-});
+const fetchJson = async (url, label) => {
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(10_000),
+  });
 
-if (!health.ok) {
-  throw new Error(
-    `Marvel Metadata API health check failed with HTTP ${health.status}.`,
-  );
-}
+  if (!response.ok) {
+    throw new Error(
+      `Marvel Metadata API ${label} failed with HTTP ${response.status}.`,
+    );
+  }
 
-const response = await fetch(new URL(`${base}/issues/52447`), {
-  headers: { Accept: "application/json" },
-  signal: AbortSignal.timeout(10_000),
-});
+  return response.json();
+};
 
-if (!response.ok) {
-  throw new Error(
-    `Marvel Metadata API contract check failed with HTTP ${response.status}.`,
-  );
-}
+await fetchJson(new URL(`${base}/health`), "health check");
 
-const issue = await response.json();
+const listUrl = new URL(`${base}/issues`);
+listUrl.searchParams.set("limit", "1");
+listUrl.searchParams.set("offset", "0");
+
+const listPayload = await fetchJson(listUrl, "issue-list contract check");
+const summary = listPayload?.items?.[0];
 
 if (
-  !Number.isInteger(issue?.id) ||
-  typeof issue?.title !== "string" ||
-  !issue.title.trim() ||
-  !Array.isArray(issue?.creators)
+  !Number.isInteger(summary?.id) ||
+  typeof summary?.title !== "string" ||
+  !summary.title.trim() ||
+  typeof listPayload?.has_next !== "boolean"
 ) {
   throw new TypeError(
-    "Marvel Metadata API contract smoke returned an unexpected issue shape.",
+    "Marvel Metadata API list contract returned an unexpected shape.",
   );
 }
 
-console.log(`Marvel Metadata API contract OK: ${issue.title} (#${issue.id})`);
+const detail = await fetchJson(
+  new URL(`${base}/issues/${summary.id}`),
+  "issue-detail contract check",
+);
+
+if (
+  detail?.id !== summary.id ||
+  typeof detail?.title !== "string" ||
+  !detail.title.trim() ||
+  !Array.isArray(detail?.creators)
+) {
+  throw new TypeError(
+    "Marvel Metadata API detail contract returned an unexpected shape.",
+  );
+}
+
+console.log(
+  `Marvel Metadata API contract OK: ${detail.title} (#${detail.id})`,
+);

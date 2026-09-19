@@ -60,7 +60,9 @@ const App = () => {
     setPreferences((current) => rememberIssue(current, issue));
   }, []);
 
-  const issues = useIssueList(urlState.query);
+  const isExplore = urlState.view === "explore";
+  const isReading = urlState.view === "reading";
+  const issues = useIssueList(urlState.query, { enabled: isExplore });
   const detail = useIssueDetails(urlState.issueId, {
     onLoaded: rememberViewedIssue,
   });
@@ -100,8 +102,6 @@ const App = () => {
         : issues.items;
 
   const copy = viewCopy[urlState.view];
-  const isExplore = urlState.view === "explore";
-  const isReading = urlState.view === "reading";
   const title =
     isExplore && urlState.query
       ? `Issues matching “${urlState.query}”`
@@ -115,9 +115,11 @@ const App = () => {
     ? `${preferences.readingList.length} queued`
     : isExplore && issues.loading
       ? "Loading issues…"
-      : isExplore && issues.total
-        ? `${activeIssues.length} shown · ${issues.total.toLocaleString()} matched`
-        : `${activeIssues.length} shown`;
+      : isExplore && urlState.query
+        ? `${activeIssues.length} search results shown`
+        : isExplore && issues.total
+          ? `${activeIssues.length} shown · ${issues.total.toLocaleString()} indexed`
+          : `${activeIssues.length} shown`;
 
   return (
     <div className="app-shell">
