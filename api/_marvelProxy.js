@@ -4,6 +4,9 @@ const API_BASE = "https://gateway.marvel.com/v1/public";
 const ALLOWED_PATH = /^characters(?:\/\d+(?:\/comics)?)?$/;
 const ALLOWED_ORDER = new Set(["name", "-onsaleDate"]);
 const ALLOWED_FORMAT_TYPE = new Set(["comic"]);
+const ALLOWED_BROWSER_ORIGINS = new Set([
+  "https://mykoladotsenko.github.io",
+]);
 
 const positiveInteger = (value, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) => {
   if (value === undefined || value === null || value === "") return null;
@@ -14,6 +17,11 @@ const positiveInteger = (value, { min = 0, max = Number.MAX_SAFE_INTEGER } = {})
 
 export const isAllowedMarvelPath = (path) =>
   typeof path === "string" && ALLOWED_PATH.test(path);
+
+export const getAllowedCorsOrigin = (origin) =>
+  typeof origin === "string" && ALLOWED_BROWSER_ORIGINS.has(origin)
+    ? origin
+    : null;
 
 export const createMarvelHash = ({
   timestamp,

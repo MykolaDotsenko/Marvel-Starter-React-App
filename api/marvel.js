@@ -1,10 +1,24 @@
-import { buildMarvelUrl, isAllowedMarvelPath } from "./_marvelProxy.js";
+import {
+  buildMarvelUrl,
+  getAllowedCorsOrigin,
+  isAllowedMarvelPath,
+} from "./_marvelProxy.js";
 
 const CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
 
 const toSingleValue = (value) => (Array.isArray(value) ? value[0] : value);
 
+const applyCorsHeaders = (request, response) => {
+  const origin = getAllowedCorsOrigin(toSingleValue(request.headers?.origin));
+  if (!origin) return;
+
+  response.setHeader("Access-Control-Allow-Origin", origin);
+  response.setHeader("Vary", "Origin");
+};
+
 export default async function handler(request, response) {
+  applyCorsHeaders(request, response);
+
   if (request.method !== "GET") {
     response.setHeader("Allow", "GET");
     return response.status(405).json({
