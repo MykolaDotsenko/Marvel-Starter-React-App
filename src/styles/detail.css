@@ -305,4 +305,54 @@
   .detail-card {
     transition: transform 180ms ease;
   }
+  @media (min-width: 981px) {
+    .detail-rail {
+      --detail-sticky-top: 98px;
+      --detail-viewport-gap: 16px;
+      top: var(--detail-sticky-top);
+      max-height: calc(
+        100dvh - var(--detail-sticky-top) - var(--detail-viewport-gap)
+      );
+    }
+
+    .detail-card {
+      max-height: calc(
+        100dvh - var(--detail-sticky-top) - var(--detail-viewport-gap)
+      );
+      overflow-x: hidden;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+
+    .detail-card__toolbar {
+      position: sticky;
+      z-index: 6;
+      top: 0;
+      background: color-mix(in oklch, var(--surface) 94%, black);
+      backdrop-filter: blur(14px) saturate(120%);
+    }
+
+    .detail-card::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .detail-card::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .detail-card::-webkit-scrollbar-thumb {
+      border: 2px solid transparent;
+      border-radius: 999px;
+      background: var(--line-strong);
+      background-clip: padding-box;
+    }
+
+    .detail-card::-webkit-scrollbar-thumb:hover {
+      background: var(--faint);
+      background-clip: padding-box;
+    }
+  }
+
 }

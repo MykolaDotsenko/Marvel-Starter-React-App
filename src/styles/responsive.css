@@ -89,10 +89,19 @@
     .detail-rail {
       position: static;
       order: -1;
+      max-height: none;
     }
 
     .detail-card {
       max-width: none;
+      max-height: none;
+      overflow: visible;
+      scrollbar-gutter: auto;
+    }
+
+    .detail-card__toolbar {
+      position: static;
+      backdrop-filter: none;
     }
   }
 

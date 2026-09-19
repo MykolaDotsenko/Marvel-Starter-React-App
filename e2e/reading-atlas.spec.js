@@ -120,6 +120,65 @@ test.beforeEach(async ({ page }) => {
 
 
 
+
+test("desktop dossier keeps an independent scrollport while the issue grid remains the page scroller", async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width <= 980, "Desktop master/detail contract");
+
+  await page.setViewportSize({ width: 1440, height: 620 });
+  await page.goto("/");
+
+  await page
+    .getByRole("button", { name: `Open issue details for ${secretWars.title}` })
+    .click();
+
+  await page.locator(".explorer").evaluate((element) => {
+    element.style.minHeight = "1600px";
+  });
+
+  await page.evaluate(() => {
+    const workspace = document.querySelector(".workspace");
+    window.scrollTo({ top: workspace.offsetTop + 180, behavior: "instant" });
+  });
+
+  const rail = page.locator(".detail-rail");
+  const card = page.locator(".detail-card");
+
+  const contract = await card.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const toolbar = element.querySelector(".detail-card__toolbar");
+
+    return {
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      overflowY: style.overflowY,
+      toolbarPosition: toolbar ? getComputedStyle(toolbar).position : null,
+    };
+  });
+
+  expect(contract.scrollHeight).toBeGreaterThan(contract.clientHeight);
+  expect(["auto", "scroll"]).toContain(contract.overflowY);
+  expect(contract.toolbarPosition).toBe("sticky");
+
+  const railTop = await rail.evaluate((element) =>
+    Math.round(element.getBoundingClientRect().top),
+  );
+  expect(railTop).toBeGreaterThanOrEqual(96);
+  expect(railTop).toBeLessThanOrEqual(100);
+
+  const pageScrollBefore = await page.evaluate(() => window.scrollY);
+
+  await card.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight * 0.55);
+  });
+
+  const detailScrollTop = await card.evaluate((element) => element.scrollTop);
+  const pageScrollAfter = await page.evaluate(() => window.scrollY);
+
+  expect(detailScrollTop).toBeGreaterThan(0);
+  expect(pageScrollAfter).toBe(pageScrollBefore);
+});
+
 test("phone UI uses app navigation, compact cards and minimum touch targets", async ({ page }) => {
   const viewport = page.viewportSize();
   test.skip(!viewport || viewport.width > 700, "Phone-only layout contract");
@@ -333,6 +392,13 @@ test("a shared issue URL records the issue as recently viewed", async ({ page })
     page.getByRole("heading", { name: secretWars.title, exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /Recent.*1 item/ })).toBeVisible();
+
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width <= 700) {
+    await expect(page.locator(".detail-rail--open")).toBeVisible();
+    await page.getByRole("button", { name: /Close/ }).click();
+  }
+
   await expect(
     page.getByRole("button", { name: `Open issue details for ${secretWars.title}` }),
   ).toBeVisible();

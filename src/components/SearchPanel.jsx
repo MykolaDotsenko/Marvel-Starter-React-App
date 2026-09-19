@@ -46,7 +46,7 @@ export const SearchPanel = ({ activeQuery, onSubmit, quickSearches }) => {
             if (validation) setValidation("");
           }}
         />
-        <button className="primary-action search-submit" type="submit">
+        <button className="primary-action search-submit" type="submit" aria-label="Search">
           <Icon name="search" size={17} />
           <span>Search</span>
         </button>
