@@ -1,6 +1,7 @@
 export const Header = ({
   activeView,
-  favoriteCount,
+  savedCount,
+  readingCount,
   recentCount,
   onViewChange,
 }) => (
@@ -9,41 +10,33 @@ export const Header = ({
       className="brand brand--button"
       type="button"
       onClick={() => onViewChange("explore")}
-      aria-label="Open Marvel Atlas explore view"
+      aria-label="Open Marvel Reading Atlas explore view"
     >
-      <span className="brand__mark" aria-hidden="true">MA</span>
+      <span className="brand__mark" aria-hidden="true">RA</span>
       <span>
-        <strong>Marvel Atlas</strong>
-        <small>Character intelligence</small>
+        <strong>Marvel Reading Atlas</strong>
+        <small>Comic discovery & reading plans</small>
       </span>
     </button>
 
-    <nav className="site-nav" aria-label="Discovery views">
-      <button
-        type="button"
-        className={activeView === "explore" ? "is-active" : ""}
-        aria-pressed={activeView === "explore"}
-        onClick={() => onViewChange("explore")}
-      >
-        Explore
-      </button>
-      <button
-        type="button"
-        className={activeView === "saved" ? "is-active" : ""}
-        aria-pressed={activeView === "saved"}
-        onClick={() => onViewChange("saved")}
-      >
-        <span aria-hidden="true">★</span>
-        Saved <strong>{favoriteCount}</strong>
-      </button>
-      <button
-        type="button"
-        className={activeView === "recent" ? "is-active" : ""}
-        aria-pressed={activeView === "recent"}
-        onClick={() => onViewChange("recent")}
-      >
-        Recent <strong>{recentCount}</strong>
-      </button>
+    <nav className="site-nav" aria-label="Reading Atlas views">
+      {[
+        ["explore", "Explore", null],
+        ["saved", "Saved", savedCount],
+        ["reading", "Reading", readingCount],
+        ["recent", "Recent", recentCount],
+      ].map(([view, label, count]) => (
+        <button
+          key={view}
+          type="button"
+          className={activeView === view ? "is-active" : ""}
+          aria-pressed={activeView === view}
+          onClick={() => onViewChange(view)}
+        >
+          {label}
+          {count !== null ? <strong>{count}</strong> : null}
+        </button>
+      ))}
     </nav>
   </header>
 );

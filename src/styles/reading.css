@@ -1,0 +1,21 @@
+@layer components {
+  .reading-board { display:grid; gap:14px; }
+  .reading-summary { display:grid; grid-template-columns:minmax(0,1fr) minmax(120px,.5fr) auto; align-items:center; gap:22px; border:1px solid var(--line); border-radius:var(--radius-md); background:linear-gradient(130deg,rgb(217 16 25 / .13),transparent 44%),var(--surface); padding:22px; }
+  .reading-summary > div { display:grid; gap:6px; }
+  .reading-summary h3 { font-size:1.45rem; }
+  .reading-summary p:not(.eyebrow) { color:var(--muted); font-size:.76rem; }
+  .reading-progress { width:100%; height:10px; accent-color:var(--accent); }
+  .reading-complete { color:var(--success); font-size:.82rem; font-weight:850; }
+  .reading-list { display:grid; gap:8px; }
+  .reading-item { display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:12px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--surface); padding:10px; transition:border-color 160ms ease,opacity 160ms ease; }
+  .reading-item.is-selected { border-color:color-mix(in oklch,var(--accent) 78%,white); }
+  .reading-item.is-read { opacity:.62; }
+  .reading-item__index { display:grid; width:42px; aspect-ratio:1; place-items:center; border-radius:10px; background:var(--surface-soft); color:var(--muted); font-size:.72rem; font-weight:900; font-variant-numeric:tabular-nums; }
+  .reading-item__open { min-width:0; display:grid; gap:4px; border:0; background:transparent; color:inherit; padding:6px; text-align:left; cursor:pointer; }
+  .reading-item__open > span { overflow:hidden; color:#ff8a90; font-size:.64rem; font-weight:800; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
+  .reading-item__open strong { overflow:hidden; font-size:.86rem; text-overflow:ellipsis; white-space:nowrap; }
+  .reading-item__open small { color:var(--muted); font-size:.68rem; }
+  .reading-item__controls { display:flex; align-items:center; gap:4px; }
+  .reading-item__controls .icon-action { width:32px; }
+  .reading-item__remove { color:#ff858b; }
+}

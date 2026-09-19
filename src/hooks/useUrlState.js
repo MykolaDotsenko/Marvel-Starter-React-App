@@ -2,18 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 import {
   normalizeViewMode,
   sanitizeSearchTerm,
-} from "../domain/marvel.js";
+} from "../domain/reading.js";
 
 const readUrlState = () => {
   const params = new URLSearchParams(window.location.search);
-  const rawCharacterId = Number(params.get("character"));
+  const rawIssueId = Number(params.get("issue"));
 
   return {
     query: sanitizeSearchTerm(params.get("q") ?? ""),
-    characterId:
-      Number.isInteger(rawCharacterId) && rawCharacterId > 0
-        ? rawCharacterId
-        : null,
+    issueId:
+      Number.isInteger(rawIssueId) && rawIssueId > 0 ? rawIssueId : null,
     view: normalizeViewMode(params.get("view")),
   };
 };
@@ -32,7 +30,7 @@ export const useUrlState = () => {
     const params = new URLSearchParams();
 
     if (next.query) params.set("q", sanitizeSearchTerm(next.query));
-    if (next.characterId) params.set("character", String(next.characterId));
+    if (next.issueId) params.set("issue", String(next.issueId));
     if (next.view && next.view !== "explore") {
       params.set("view", normalizeViewMode(next.view));
     }
