@@ -10,6 +10,7 @@ import { AtlasRoutePanel } from "../components/AtlasRoutePanel.jsx";
 import { Header } from "../components/Header.jsx";
 import { IssueDetail } from "../components/IssueDetail.jsx";
 import { IssueGrid } from "../components/IssueGrid.jsx";
+import { MobileNav } from "../components/MobileNav.jsx";
 import { ReadingListPanel } from "../components/ReadingListPanel.jsx";
 import { RecentTimeline } from "../components/RecentTimeline.jsx";
 import { SavedShelf } from "../components/SavedShelf.jsx";
@@ -121,6 +122,14 @@ const App = () => {
     startTransition(() => setUrlState({ view }));
   };
 
+  const focusPrimarySearch = () => {
+    const input = document.getElementById("issue-search");
+    if (!input) return;
+
+    input.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => input.focus({ preventScroll: true }), 250);
+  };
+
   const copy = viewCopy[urlState.view];
   const title =
     isExplore && urlState.query
@@ -159,6 +168,7 @@ const App = () => {
         recentCount={preferences.recent.length}
         showCompactSearch={showCompactSearch}
         onSearch={submitSearch}
+        onMobileSearch={focusPrimarySearch}
         onViewChange={changeView}
       />
 
@@ -286,7 +296,10 @@ const App = () => {
             )}
           </section>
 
-          <aside className="detail-rail" aria-label="Issue reading intelligence">
+          <aside
+            className={`detail-rail${urlState.issueId ? " detail-rail--open" : ""}`}
+            aria-label="Issue reading intelligence"
+          >
             <IssueDetail
               issueId={urlState.issueId}
               issue={detail.issue}
@@ -309,6 +322,14 @@ const App = () => {
           </aside>
         </div>
       </main>
+
+      <MobileNav
+        activeView={urlState.view}
+        savedCount={preferences.saved.length}
+        readingCount={preferences.readingList.length}
+        recentCount={preferences.recent.length}
+        onViewChange={changeView}
+      />
 
       <footer className="site-footer">
         <p>

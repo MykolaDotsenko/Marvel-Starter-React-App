@@ -1,4 +1,5 @@
 import { CompactSearch } from "./CompactSearch.jsx";
+import { Icon } from "./Icon.jsx";
 
 export const Header = ({
   activeView,
@@ -8,6 +9,7 @@ export const Header = ({
   recentCount,
   showCompactSearch,
   onSearch,
+  onMobileSearch,
   onViewChange,
 }) => {
   const items = [
@@ -37,6 +39,15 @@ export const Header = ({
       {showCompactSearch ? (
         <CompactSearch key={activeQuery} activeQuery={activeQuery} onSubmit={onSearch} />
       ) : null}
+
+      <button
+        className="mobile-header-search"
+        type="button"
+        aria-label="Jump to comic search"
+        onClick={onMobileSearch}
+      >
+        <Icon name="search" size={20} />
+      </button>
 
       <nav className="site-nav" aria-label="Reading Atlas views">
         {items.map(([view, label, count]) => (
