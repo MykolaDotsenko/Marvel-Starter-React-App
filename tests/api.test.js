@@ -34,6 +34,22 @@ afterEach(() => {
 });
 
 describe("Marvel API cache", () => {
+  it("calls the public Marvel API directly without private-key signing", async () => {
+    const fetchMock = vi.fn(async () => response());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await listCharacters({ query: "Spider" });
+
+    const requestUrl = new URL(fetchMock.mock.calls[0][0].toString());
+
+    expect(requestUrl.origin).toBe("https://gateway.marvel.com");
+    expect(requestUrl.pathname).toBe("/v1/public/characters");
+    expect(requestUrl.searchParams.get("nameStartsWith")).toBe("Spider");
+    expect(requestUrl.searchParams.get("apikey")).toBeTruthy();
+    expect(requestUrl.searchParams.has("hash")).toBe(false);
+    expect(requestUrl.searchParams.has("ts")).toBe(false);
+  });
+
   it("reuses a fresh response for an identical request", async () => {
     const fetchMock = vi.fn(async () => response());
     vi.stubGlobal("fetch", fetchMock);

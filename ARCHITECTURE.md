@@ -189,30 +189,27 @@ responsive behavior. Cascade layers preserve explicit ordering without a CSS
 framework.
 
 
-## Production Marvel API boundary
+## Browser Marvel API boundary
 
-Production traffic uses a same-origin Vercel Function:
+Marvel Atlas has no backend requirement. Local development, Vercel, and GitHub
+Pages therefore use the same browser path:
 
 ```text
 Browser
   |
-  +--> /api/marvel
+  +--> gateway.marvel.com/v1/public
           |
-          +--> whitelist path + query params
-          +--> server-only MARVEL_PUBLIC_KEY / MARVEL_PRIVATE_KEY
-          +--> ts + MD5 authentication
-          |
-          +--> gateway.marvel.com
+          +--> public API key
+          +--> characters
+          +--> characters/:id
+          +--> characters/:id/comics
 ```
 
-The browser never receives the Marvel private key. Local Vite development can
-continue to use the public-key browser flow, while deployed builds switch to the
-same-origin proxy via `import.meta.env.PROD`.
+Only Marvel's public browser credential is used. The public key is intentionally
+client-visible; a Marvel private key is neither required nor accepted anywhere
+in the application.
 
-The proxy intentionally supports only:
-
-- `characters`
-- `characters/:id`
-- `characters/:id/comics`
-
-This prevents the endpoint from becoming a generic upstream relay.
+This removes a serverless hop, eliminates deployment-specific secret management,
+and keeps the network boundary identical across hosting providers. If browser
+referrer restrictions are enabled in the Marvel developer account, deployed
+origins must be added to that account's allowlist.
