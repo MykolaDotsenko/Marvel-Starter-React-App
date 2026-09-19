@@ -2,30 +2,28 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listCharacters } from "../api/marvelClient.js";
 import { CHARACTER_PAGE_SIZE, uniqueById } from "../domain/marvel.js";
 
-const initialState = {
+const createState = (query) => ({
+  query,
   items: [],
-  loading: true,
   loadingMore: false,
   error: null,
   offset: 0,
   ended: false,
-};
+});
 
 export const useCharacterList = (query) => {
-  const [state, setState] = useState(initialState);
+  const [state, setState] = useState(() => createState(null));
   const loadMoreController = useRef(null);
 
   useEffect(() => {
     const controller = new AbortController();
     loadMoreController.current?.abort();
 
-    setState(initialState);
-
     listCharacters({ query, offset: 0, signal: controller.signal })
       .then((items) => {
         setState({
+          query,
           items,
-          loading: false,
           loadingMore: false,
           error: null,
           offset: items.length,
@@ -34,11 +32,10 @@ export const useCharacterList = (query) => {
       })
       .catch((error) => {
         if (error?.name === "AbortError") return;
-        setState((current) => ({
-          ...current,
-          loading: false,
+        setState({
+          ...createState(query),
           error,
-        }));
+        });
       });
 
     return () => controller.abort();
@@ -51,37 +48,58 @@ export const useCharacterList = (query) => {
     [],
   );
 
+  const current =
+    state.query === query
+      ? state
+      : {
+          ...createState(query),
+          loadingMore: false,
+        };
+
   const loadMore = useCallback(async () => {
-    if (state.loading || state.loadingMore || state.ended) return;
+    if (current.loadingMore || current.ended) return;
 
     loadMoreController.current?.abort();
     const controller = new AbortController();
     loadMoreController.current = controller;
-    setState((current) => ({ ...current, loadingMore: true, error: null }));
+
+    setState((existing) => ({
+      ...(existing.query === query ? existing : createState(query)),
+      loadingMore: true,
+      error: null,
+    }));
 
     try {
       const nextItems = await listCharacters({
         query,
-        offset: state.offset,
+        offset: current.offset,
         signal: controller.signal,
       });
 
-      setState((current) => ({
-        ...current,
-        items: uniqueById([...current.items, ...nextItems]),
-        loadingMore: false,
-        offset: current.offset + nextItems.length,
-        ended: nextItems.length < CHARACTER_PAGE_SIZE,
-      }));
+      setState((existing) => {
+        const base = existing.query === query ? existing : createState(query);
+        return {
+          ...base,
+          items: uniqueById([...base.items, ...nextItems]),
+          loadingMore: false,
+          error: null,
+          offset: base.offset + nextItems.length,
+          ended: nextItems.length < CHARACTER_PAGE_SIZE,
+        };
+      });
     } catch (error) {
       if (error?.name === "AbortError") return;
-      setState((current) => ({
-        ...current,
+      setState((existing) => ({
+        ...(existing.query === query ? existing : createState(query)),
         loadingMore: false,
         error,
       }));
     }
-  }, [query, state.ended, state.loading, state.loadingMore, state.offset]);
+  }, [current.ended, current.loadingMore, current.offset, query]);
 
-  return { ...state, loadMore };
+  return {
+    ...current,
+    loading: state.query !== query,
+    loadMore,
+  };
 };

@@ -18,25 +18,13 @@ const quickSearches = ["Spider", "Iron", "Black", "Captain", "Thor"];
 const App = () => {
   const [urlState, setUrlState] = useUrlState();
   const [preferences, setPreferences] = useState(loadPreferences);
-  const [searchDraft, setSearchDraft] = useState(urlState.query);
 
   const characters = useCharacterList(urlState.query);
   const detail = useCharacterDetails(urlState.characterId);
 
   useEffect(() => {
-    setSearchDraft(urlState.query);
-  }, [urlState.query]);
-
-  useEffect(() => {
     savePreferences(preferences);
   }, [preferences]);
-
-  useEffect(() => {
-    if (!urlState.characterId) return;
-    setPreferences((current) =>
-      rememberCharacter(current, urlState.characterId),
-    );
-  }, [urlState.characterId]);
 
   const favoriteSet = useMemo(
     () => new Set(preferences.favorites),
@@ -50,6 +38,7 @@ const App = () => {
   };
 
   const selectCharacter = (characterId) => {
+    setPreferences((current) => rememberCharacter(current, characterId));
     startTransition(() => {
       setUrlState({ characterId });
     });
@@ -93,9 +82,8 @@ const App = () => {
         </section>
 
         <SearchPanel
-          value={searchDraft}
+          key={urlState.query}
           activeQuery={urlState.query}
-          onChange={setSearchDraft}
           onSubmit={submitSearch}
           quickSearches={quickSearches}
         />

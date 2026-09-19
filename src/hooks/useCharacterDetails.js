@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { getCharacter, getCharacterComics } from "../api/marvelClient.js";
 
 const emptyState = {
+  requestId: null,
   character: null,
   comics: [],
-  loading: false,
   error: null,
 };
 
@@ -12,13 +12,9 @@ export const useCharacterDetails = (characterId) => {
   const [state, setState] = useState(emptyState);
 
   useEffect(() => {
-    if (!characterId) {
-      setState(emptyState);
-      return undefined;
-    }
+    if (!characterId) return undefined;
 
     const controller = new AbortController();
-    setState({ ...emptyState, loading: true });
 
     Promise.all([
       getCharacter(characterId, { signal: controller.signal }),
@@ -31,18 +27,18 @@ export const useCharacterDetails = (characterId) => {
     ])
       .then(([character, comics]) => {
         setState({
+          requestId: characterId,
           character,
           comics,
-          loading: false,
           error: null,
         });
       })
       .catch((error) => {
         if (error?.name === "AbortError") return;
         setState({
+          requestId: characterId,
           character: null,
           comics: [],
-          loading: false,
           error,
         });
       });
@@ -50,5 +46,28 @@ export const useCharacterDetails = (characterId) => {
     return () => controller.abort();
   }, [characterId]);
 
-  return state;
+  if (!characterId) {
+    return {
+      character: null,
+      comics: [],
+      loading: false,
+      error: null,
+    };
+  }
+
+  if (state.requestId !== characterId) {
+    return {
+      character: null,
+      comics: [],
+      loading: true,
+      error: null,
+    };
+  }
+
+  return {
+    character: state.character,
+    comics: state.comics,
+    loading: false,
+    error: state.error,
+  };
 };

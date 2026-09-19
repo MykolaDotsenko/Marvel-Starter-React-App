@@ -1,10 +1,8 @@
-export const SearchPanel = ({
-  value,
-  activeQuery,
-  onChange,
-  onSubmit,
-  quickSearches,
-}) => {
+import { useState } from "react";
+
+export const SearchPanel = ({ activeQuery, onSubmit, quickSearches }) => {
+  const [value, setValue] = useState(activeQuery);
+
   const submit = (event) => {
     event.preventDefault();
     onSubmit(value);
@@ -32,7 +30,7 @@ export const SearchPanel = ({
             maxLength={80}
             autoComplete="off"
             placeholder="Try Spider, Iron, Storm…"
-            onChange={(event) => onChange(event.target.value)}
+            onChange={(event) => setValue(event.target.value)}
           />
           <button className="primary-action" type="submit">
             Search
@@ -47,7 +45,7 @@ export const SearchPanel = ({
               className={activeQuery === query ? "is-active" : ""}
               aria-pressed={activeQuery === query}
               onClick={() => {
-                onChange(query);
+                setValue(query);
                 onSubmit(query);
               }}
             >
@@ -59,7 +57,7 @@ export const SearchPanel = ({
               type="button"
               className="quick-searches__clear"
               onClick={() => {
-                onChange("");
+                setValue("");
                 onSubmit("");
               }}
             >
